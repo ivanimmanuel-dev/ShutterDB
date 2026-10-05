@@ -52,7 +52,7 @@ ctest --test-dir build -C Release --output-on-failure
 ```
 
 The CLI is `build/shutter`, or `build/Release/shutter.exe` with Visual Studio.
-The [v0.2.1 release](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.2.1)
+The [latest release](https://github.com/ivanimmanuel-dev/ShutterDB/releases/latest)
 includes a source archive and Linux/Windows packages with the CLI, library, headers
 and CMake configuration.
 
