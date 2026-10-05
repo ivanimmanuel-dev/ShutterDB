@@ -83,7 +83,6 @@ if args.install:
                   f"CLI: bin/{executable.name}\n"
                   "Use this directory as CMAKE_PREFIX_PATH and link ShutterDB::ShutterDB.\n"
                   f"Runtime: {args.runtime}\n"
-                  "Build applications with a compatible C++ compiler, ABI and runtime.\n"
                   "Documentation: https://github.com/ivanimmanuel-dev/ShutterDB#documentation\n")
         add(archive, f"shutterdb-{version}-{args.platform}/README.txt", notice.encode())
     artifacts.append(binary)

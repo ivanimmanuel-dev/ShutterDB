@@ -12,9 +12,8 @@ auto bytes = cache.get_string("asset:42");
 cache.sync();
 ```
 
-Link the same `ShutterDB::ShutterDB` target as the ordinary database. No additional
-library dependencies are needed. The [preview example](asset-cache.md) uses content
-hashes to reuse generated images across process restarts.
+Link `ShutterDB::ShutterDB`. The [preview example](asset-cache.md) uses content hashes
+to reuse generated images across process restarts.
 
 ## Budget and eviction
 
@@ -31,10 +30,9 @@ one eighth of the usable budget free, so the next few writes do not each trigger
 full rewrite. The value being inserted is protected from that cleanup. An entry too
 large for the whole budget returns `false` before changing or evicting anything.
 
-The budget is a steady-state limit on the main file. Appending and compaction need
-temporary space: compaction retains the old file, a backup and the replacement until
-publication succeeds. An operation that fails during maintenance can leave sidecars
-or a file over budget; reopening applies recovery and the budget again.
+Appending and compaction need space beyond the budget. Compaction holds the old file,
+a backup and the replacement. Failed maintenance can leave sidecars or a file over
+budget; reopening recovers the file and reapplies the budget.
 
 Opening an existing ShutterDB file as a cache can evict its records to meet the chosen
 budget. Use `DB` for records that must remain until the application explicitly deletes them.
@@ -60,5 +58,5 @@ Cache writes are buffered by default. Call `sync()` at application checkpoints o
 Closing a handle does not synchronize buffered writes. Eviction and insertion are separate
 operations; a failed insertion can leave earlier evictions in place.
 
-The underlying file format is unchanged. The CLI can inspect, verify and compact cache
-files, and `DB` can open them when the cache handle is closed.
+The CLI can inspect, verify and compact cache files. `DB` can open them when the cache
+handle is closed.

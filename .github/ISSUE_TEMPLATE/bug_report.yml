@@ -3,19 +3,19 @@ description: Report a bug
 body:
   - type: markdown
     attributes:
-      value: "For security-sensitive bugs, use [private reporting](https://github.com/ivanimmanuel-dev/ShutterDB/security/advisories/new). Use synthetic data in reproductions."
+      value: "Report vulnerabilities [privately](https://github.com/ivanimmanuel-dev/ShutterDB/security/advisories/new)."
   - type: textarea
     id: environment
     attributes:
       label: Environment
-      description: Revision, OS, compiler, filesystem, durability options and build flags
+      description: ShutterDB version or commit, OS, compiler, filesystem and options
     validations:
       required: true
   - type: textarea
     id: repro
     attributes:
       label: Minimal reproduction
-      description: Commands or code using a new temporary database
+      description: Commands or code that reproduce the bug with a new database
     validations:
       required: true
   - type: textarea

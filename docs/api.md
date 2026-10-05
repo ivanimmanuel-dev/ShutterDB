@@ -93,7 +93,5 @@ Keys contain 1–65,536 bytes; values contain 0–16,777,216 bytes. Each index e
 charged key length plus 128 bytes. Allocator overhead and temporary record buffers
 also contribute to process memory.
 
-Failures throw `shutter::Error`, which carries a category, offset and optional checksum
-values. Allocation and filesystem conversion errors can propagate as standard exceptions.
-See [error handling](error-handling.md). Use matching library and headers when upgrading;
-the pre-1.0 API can change between releases.
+Database errors use `shutter::Error` with a category, offset and optional checksum values.
+See [error handling](error-handling.md) for diagnostics and recovery.

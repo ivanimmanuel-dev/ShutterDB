@@ -16,8 +16,7 @@ cmake --build build-assets --config Release --parallel
 build-assets/shutter_asset_cache previews.shdb ./images ./previews --max-mib 1024
 ```
 
-Pillow is used only by the integration tests. The C++ library and ordinary CLI do not
-depend on these image libraries.
+Pillow is used by the integration tests.
 
 The program reads a flat input directory containing `.png`, `.jpg` or `.jpeg` files
 (case insensitive). Each image may be up to 4096 × 4096 pixels and 64 MiB encoded.
@@ -52,7 +51,6 @@ if (!preview) {
 The key is `preview-v2:128:<sha256>`. A content change produces a new key even if the
 file size and timestamp remain unchanged. Changing the renderer should change the
 version prefix. Writes synchronize every 128 generated previews and at the end.
-A lost or evicted preview can be regenerated from its source.
 
 ## Test and inspect
 

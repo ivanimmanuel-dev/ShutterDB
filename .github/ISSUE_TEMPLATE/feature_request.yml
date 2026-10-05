@@ -10,10 +10,6 @@ body:
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed behavior and alternatives
+      label: Expected behavior
     validations:
       required: true
-  - type: textarea
-    id: failures
-    attributes:
-      label: Tradeoffs and testing

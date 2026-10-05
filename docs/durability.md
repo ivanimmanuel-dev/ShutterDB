@@ -55,9 +55,8 @@ Network filesystems, cloud-synchronized directories and mixed Windows/WSL access
 same open database are unsupported.
 
 The write protocol assumes a later torn write does not damage previously synchronized
-sectors. Physical power cuts, sector tearing and reordered block writes have not been
-tested. Executed process-exit, syscall-failure and corruption tests are recorded in
-[release results](validation.md).
+sectors. [Failure tests](testing.md) exercise process termination, syscall errors and
+file corruption; physical power-loss behavior has not been measured.
 
 ## Backups and deletion
 

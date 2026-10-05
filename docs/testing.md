@@ -80,10 +80,9 @@ Format project-owned C and C++ with clang-format 21. Enable the configured clang
 with `-DSHUTTER_CLANG_TIDY=ON -DSHUTTER_BUILD_TESTS=OFF`.
 
 CI covers GCC/Clang Debug and Release, Windows MSVC, macOS, sanitizers, fuzzing, stress,
-formatting, static analysis and installed/FetchContent consumers. The
-[v0.1.0 results](validation.md) record that release's executed checks.
+formatting, static analysis and installed/FetchContent consumers.
 
-## Publication checks
+## Package checks
 
 ```sh
 python3 tools/check-project.py

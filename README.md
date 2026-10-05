@@ -52,9 +52,8 @@ ctest --test-dir build -C Release --output-on-failure
 ```
 
 The CLI is `build/shutter`, or `build/Release/shutter.exe` with Visual Studio.
-Python 3 enables the CLI and fault-injection test suites.
-The main branch targets v0.2.0. The [v0.1.0 packages](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0)
-contain the `DB` API; build from source to use `Cache`.
+Build from the main branch to use `Cache`. The [v0.1.0 packages](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0)
+provide the `DB` API.
 
 ## Use in your project
 
@@ -105,12 +104,12 @@ It includes the workload, environment, raw results and commands to reproduce the
 |---|---|
 | [Getting started](docs/getting-started.md) | Build, install, vendor and link |
 | [C++ API](docs/api.md) | Operations, options, ownership and limits |
-| [Bounded cache](docs/cache.md) · [Image example](docs/asset-cache.md) | Disk budgets, eviction and PNG/JPEG previews |
+| [Cache API](docs/cache.md) · [Image example](docs/asset-cache.md) | Disk budgets, eviction and PNG/JPEG previews |
 | [CLI](docs/cli.md) | Commands and examples |
 | [Durability](docs/durability.md) | Synchronization, recovery and backups |
 | [Errors](docs/error-handling.md) | Error codes and verification reports |
 | [Architecture](docs/architecture.md) · [File format](docs/file-format.md) | Storage internals and format v1 |
-| [Testing](docs/testing.md) · [v0.1.0 results](docs/validation.md) | Test commands and historical release coverage |
+| [Testing](docs/testing.md) | Test suites, sanitizers, fuzzing and package checks |
 | [Benchmarks](docs/benchmarks.md) | Workloads, methodology and results |
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [MIT license](LICENSE)

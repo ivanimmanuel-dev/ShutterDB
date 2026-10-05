@@ -62,7 +62,7 @@ gh workflow run release.yml -f tag=v0.2.0
 Add `-f prerelease=true` for a prerelease. The workflow checks the tag, version and
 exact-commit CI result. It builds and tests fresh Linux and Windows x64 packages,
 verifies checksums and publishes the archives with the version's release notes.
-It stops if the release already exists. Existing tags and published archives stay immutable.
+Use a new version for changes to a published release.
 
 Source archives are byte-reproducible. Binary output depends on the compiler and runner
 revision; packages require compatible system runtimes and C++ ABIs.

@@ -15,7 +15,6 @@ The nine raw JSON files and [environment metadata](measurements/environment.json
 
 Compaction includes verification, synchronization and backup copying.
 See [methodology](benchmarks.md) for workload definitions and reproduction commands.
-These timings describe this virtualized environment.
 
 ## buffered-10k-16-128
 

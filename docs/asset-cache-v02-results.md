@@ -1,9 +1,8 @@
-# Asset-cache comparison: v0.2
+# Asset-cache benchmarks: v0.2.0
 
 This workload stores 16,384 binary assets, synchronizes every 128 operations and
 performs two rounds of overwrites and deletions before compaction. The two datasets
 contain 64 MiB and 1 GiB of initial values. Results are from one Ryzen 7 / WSL2 system.
-Other virtual-machine workloads were active on this shared host during measurement.
 Tables report medians and ranges from three repetitions.
 
 ## Batched ingestion
@@ -94,7 +93,7 @@ Seconds: median (minimum–maximum), before updates.
 | SQLite tuned | 0.001 (0.001–0.001) | 1.197 (1.120–1.530) | 1.198 (1.121–1.531) |
 | RocksDB | 1.322 (1.255–1.485) | 10.678 (8.973–15.118) | 12.164 (10.295–16.373) |
 
-## Method and scope
+## Method
 
 - One client thread; 16,384 random 64-byte ASCII keys; a pseudorandom value template
   stamped with each key’s ID and generation; seed 20261005. RocksDB may use background
@@ -157,6 +156,3 @@ Raw data: [v0.2](measurements/asset-cache-v02-after.json) ·
 [paired reopening](measurements/asset-cache-v02-reopen.json) ·
 [earlier engine, separate run](measurements/asset-cache-v02-before.json) ·
 [environment and dependency builds](measurements/asset-cache-v02-environment.json).
-
-The separate earlier-engine run records the same lifecycle harness, but the paired
-same-file test above is used for the scanner speedup to reduce timing drift between runs.

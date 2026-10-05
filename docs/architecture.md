@@ -1,8 +1,8 @@
 # Architecture
 
-ShutterDB stores data in an append-only log. Public headers expose `DB` and the bounded
-`Cache`, both with private implementations. Storage, format, checksums and index types
-live in `src/`.
+ShutterDB stores data in an append-only log with an in-memory key index. `DB` owns the
+storage; `Cache` adds access tracking and eviction. Both hide their implementations
+behind the public headers. Storage, format and index types live in `src/`.
 
 ```text
 put/remove -> validate and reserve index node -> encode -> append -> optional OS sync -> index
@@ -32,15 +32,27 @@ Read recency is kept in memory; restart order comes from record sequence numbers
 
 ## Writing and failure
 
-The write path validates arguments and reserves a new map node before appending. It encodes a bounded record, writes the header and payload through OS calls, synchronizes if requested, then updates the index. Partial writes and EINTR are retried. An uncertain append, flush or compaction failure invalidates the handle with `NEEDS_REOPEN`; a failed sync keeps bytes already written for recovery.
+The write path validates arguments and reserves a map node before appending. It writes
+the encoded header and payload, synchronizes if requested, then updates the index.
+Partial writes and EINTR are retried. An append, sync or compaction failure with an
+uncertain outcome marks the handle `NEEDS_REOPEN`; reopening scans the bytes left on disk.
 
-DELETE appends a tombstone and removes the index entry. Deleting a missing key returns false and creates no record. Statistics count all historical PUT/DELETE records and the byte size of current live records, including their headers. Reclaimable bytes exclude the 32-byte file header.
+DELETE appends a tombstone and removes the index entry. A missing key creates no record.
+Statistics count historical PUT/DELETE records and the byte size of live records,
+including their headers. Reclaimable bytes exclude the 32-byte file header.
 
 ## Stable locking
 
-The canonical database path determines a permanent `.lock` sidecar. Linux uses a nonblocking `flock`; Windows uses `LockFileEx`. The lock persists across data-file replacement. OS ownership disappears when a process dies, while the sidecar pathname remains. Hardlinked database and lock files are rejected. Symbolic database aliases are canonicalized; path parents and sidecars must be in a trusted local directory.
+The canonical database path determines a permanent `.lock` sidecar. Linux uses
+nonblocking `flock`; Windows uses `LockFileEx`. The lock stays held across data-file
+replacement. Process exit releases ownership; the sidecar pathname remains.
+Symbolic database aliases are canonicalized. Hardlinked database and lock files are
+rejected. Parent directories and sidecars must be trusted.
 
-An open `DB` has an exclusive process lock. `inspect` takes a shared lock, rejects an active writer and opens database bytes read-only. It can create the lock sidecar, which requires directory write access. Operations on one handle use one mutex. Using a handle inherited across `fork` is unsupported. Filesystem requirements are in [durability](durability.md#filesystem-requirements).
+`DB` takes an exclusive lock; `inspect` takes a shared lock and reads database bytes
+without modification. Inspection can create the sidecar and requires directory write
+access. One mutex serializes operations on a handle. Do not use inherited handles after `fork`.
+See [filesystem requirements](durability.md#filesystem-requirements).
 
 ## Compaction protocol
 
@@ -53,10 +65,17 @@ An open `DB` has an exclusive process lock. `inspect` takes a shared lock, rejec
 7. Sync the parent directory, reopen the primary, install its verified index.
 8. Remove the backup and sync the parent directory again.
 
-On failure, the handle requires reopening and sidecars remain for recovery. A valid primary takes precedence over the backup. If the primary is absent or corrupt, a valid backup is restored; otherwise opening fails. Unsupported-format, resource-limit and I/O errors prevent fallback. Abandoned `.compact` and `.backup.tmp` files are removed while locked. These suffixes and `.init` are reserved.
+Failed compaction leaves sidecars for recovery and requires reopening. A valid primary
+wins over the backup. If the primary is absent or corrupt, a valid backup is restored.
+Unsupported-format, resource-limit and I/O errors prevent fallback. Abandoned `.compact`
+and `.backup.tmp` files are removed while locked. These suffixes and `.init` are reserved.
 
-Compaction needs additional disk space for a backup of the old log and the compacted output: total use can approach three times the original file size. New files use POSIX permissions 0600; custom file metadata is not preserved.
+Compaction stores the old log, a backup and the replacement: total disk use can approach
+three times the original file size. New POSIX files use permissions 0600.
+Replacement files do not preserve custom metadata.
 
-## New database publication
+## Creating a database
 
-A new header is written and synced in `.init`, then renamed into place and the directory synced. An interrupted initialization can be retried under the same lock. Existing empty or truncated files are rejected.
+A new header is written and synced in `.init`, then renamed into place and the directory
+synced. Interrupted initialization can be retried under the same lock. Existing empty
+or truncated files are rejected.

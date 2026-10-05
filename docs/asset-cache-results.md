@@ -1,4 +1,4 @@
-# Asset-cache comparison at 87e4eae
+# SQLite comparison: 4–64 KiB assets
 
 These results describe commit `87e4eae`. See the [v0.2 comparison](asset-cache-v02-results.md)
 for larger datasets, repeated updates, RocksDB and the buffered scanner.

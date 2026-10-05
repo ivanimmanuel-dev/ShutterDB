@@ -13,11 +13,11 @@ Use [private reporting](SECURITY.md) for security-sensitive defects.
 5. Update the API, format or durability documentation when behavior changes.
 6. Run the installed-package consumer for build-system changes.
 
-Commands are in [testing](docs/testing.md). Tests use temporary databases. Benchmark
-reports include parameters, environment details and raw measurements.
+Commands are in [testing](docs/testing.md). Performance changes need a reproducible
+workload, environment details and raw measurements.
 
-Keep doctest pinned and retain its license when updating it. The library and CLI have
-no third-party runtime dependencies; see [third-party notices](THIRD_PARTY.md).
+Vendored dependency updates must include the version, checksum and license in
+[third-party notices](THIRD_PARTY.md).
 
 Pull requests should describe the change and list the checks performed.
 Contributions are licensed under [MIT](LICENSE).
