@@ -28,12 +28,14 @@ with tempfile.TemporaryDirectory(prefix="shutter-io-faults-") as folder:
         db = root / f"case-{cases}.shdb"
         run(db, "init", str(db))
         run(db, "set", "acknowledged", "must-survive")
+        run(db, "set", "second", "also-survive")
         run(db, "set", "deleted", "old")
         run(db, "delete", "deleted")
         return db
 
     def check(db):
         assert run(db, "get", "acknowledged").strip() == b"must-survive"
+        assert run(db, "get", "second").strip() == b"also-survive"
         run(db, "get", "deleted", code=1)
         assert json.loads(run(db, "verify", "--json"))["ok"]
 
@@ -74,6 +76,15 @@ with tempfile.TemporaryDirectory(prefix="shutter-io-faults-") as folder:
             run(db, "compact")
             check(db)
     db = fresh()
+    run(db, "compact", fault=("link", 1, "unsupported"))
+    check(db)
+    for mode in ["eio", "enospc"]:
+        db = fresh()
+        before = db.read_bytes()
+        run(db, "compact", code=3, fault=("link", 1, mode))
+        assert db.read_bytes() == before
+        check(db)
+    db = fresh()
     before = db.read_bytes()
     run(db, "get", "acknowledged", code=3, fault=("pread", 1, "eio"))
     assert db.read_bytes() == before
@@ -87,5 +98,6 @@ with tempfile.TemporaryDirectory(prefix="shutter-io-faults-") as folder:
             run(db, "verify")
         run(db, "init", str(db))
         run(db, "set", "acknowledged", "must-survive")
+        run(db, "set", "second", "also-survive")
         check(db)
 print(f"{cases} syscall fault scenarios passed: short I/O, EINTR, ENOSPC, read/sync/truncate/rename errors")

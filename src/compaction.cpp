@@ -5,6 +5,11 @@ namespace shutter {
 using namespace detail;
 void DB::Impl::recover_compaction() {
     const auto backup = sibling(path, ".backup");
+    if (detail::exists(path) && detail::exists(backup) && same_file(path, backup)) {
+        // An interrupted replacement can leave two names for the unchanged original.
+        remove_file(backup);
+        sync_directory(path);
+    }
     if (detail::exists(backup)) {
         bool primary_valid = false;
         if (detail::exists(path)) {
@@ -60,9 +65,13 @@ void DB::Impl::compact() {
         auto next = scan(*compacted, options);
         require_valid(next.report);
         compacted->sync();
-        // Sync both copies before replacing the primary.
+        // Persist the replacement and rollback generation before replacing the primary.
         file->sync();
-        copy_durable(*file, backup_temp);
+        if (link_backup(path, backup_temp))
+            file->sync();
+        else
+            copy_durable(*file, backup_temp);
+        hit(Fault::backup_ready);
         replace(backup_temp, backup);
         sync_directory(path);
         hit(Fault::before_replacement);

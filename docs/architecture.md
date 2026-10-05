@@ -58,20 +58,23 @@ See [filesystem requirements](durability.md#filesystem-requirements).
 1. Verify the complete original while holding the stable lock.
 2. Exclusively create `.compact`, write a new file header and live records in sequence order.
 3. Scan the complete temporary file; sync it.
-4. Sync the original; copy it into `.backup.tmp` and sync that copy.
-5. Rename the copy to `.backup`; sync the parent directory on POSIX.
+4. Sync the original; create `.backup.tmp` as a hard link and sync the original again. If the filesystem does not support links, make and sync a full copy instead.
+5. Rename `.backup.tmp` to `.backup`; sync the parent directory on POSIX.
 6. Close data handles, keeping the lock open. Atomically replace the primary with `.compact` on POSIX; use `MoveFileExW` with replacement/write-through on Windows.
 7. Sync the parent directory, reopen the primary, install its verified index.
 8. Remove the backup and sync the parent directory again.
 
 Failed compaction leaves sidecars for recovery and requires reopening. A valid primary
 wins over the backup. If the primary is absent or corrupt, a valid backup is restored.
-Unsupported-format, resource-limit and I/O errors prevent fallback. Abandoned `.compact`
-and `.backup.tmp` files are removed while locked. These suffixes and `.init` are reserved.
+Unsupported-format, resource-limit and I/O errors prevent fallback. A backup still linked
+to the primary identifies an interrupted replacement; recovery removes that extra name
+before opening the original. Abandoned `.compact` and `.backup.tmp` files are removed
+while locked. These suffixes and `.init` are reserved.
 
-Compaction stores the old log, a backup and the replacement: total disk use can approach
-three times the original file size. New POSIX files use permissions 0600.
-Replacement files do not preserve custom metadata.
+With a linked backup, compaction needs space for the old log and the replacement.
+The copy fallback also needs a second old log, so total disk use can approach three times
+the original file size. New POSIX files use permissions 0600. Replacement files do not
+preserve custom metadata.
 
 ## Creating a database
 

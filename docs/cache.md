@@ -30,9 +30,11 @@ one eighth of the usable budget free, so the next few writes do not each trigger
 full rewrite. The value being inserted is protected from that cleanup. An entry too
 large for the whole budget returns `false` before changing or evicting anything.
 
-Appending and compaction need space beyond the budget. Compaction holds the old file,
-a backup and the replacement. Failed maintenance can leave sidecars or a file over
-budget; reopening recovers the file and reapplies the budget.
+Appending and compaction need space beyond the budget. Compaction retains the old file
+while writing the replacement. Its rollback backup shares the old file's bytes on
+filesystems with hard-link support; other filesystems need an additional full copy.
+Failed maintenance can leave sidecars or a file over budget; reopening recovers the file
+and reapplies the budget.
 
 Opening an existing ShutterDB file as a cache can evict its records to meet the chosen
 budget. Use `DB` for records that must remain until the application explicitly deletes them.

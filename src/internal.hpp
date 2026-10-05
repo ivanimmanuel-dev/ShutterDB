@@ -31,7 +31,8 @@ struct Reader {
 class File final : public Reader {
   public:
     enum class Mode { read_only, read_write, create_exclusive };
-    File(const std::filesystem::path &path, Mode mode, bool lock_file = false);
+    File(const std::filesystem::path &path, Mode mode, bool lock_file = false,
+         bool allow_backup_link = false);
     ~File() override;
     File(const File &) = delete;
     File &operator=(const File &) = delete;
@@ -56,6 +57,8 @@ void replace(const std::filesystem::path &source, const std::filesystem::path &t
 void remove_file(const std::filesystem::path &path);
 bool exists(const std::filesystem::path &path);
 void copy_durable(const File &source, const std::filesystem::path &target);
+bool link_backup(const std::filesystem::path &source, const std::filesystem::path &target);
+bool same_file(const std::filesystem::path &first, const std::filesystem::path &second);
 struct Entry {
     std::uint64_t offset, sequence;
     std::uint32_t total_size, value_size;
@@ -80,6 +83,7 @@ enum class Fault {
     compaction_start,
     temporary_write,
     temporary_validation,
+    backup_ready,
     before_replacement,
     after_replacement,
     after_directory_sync

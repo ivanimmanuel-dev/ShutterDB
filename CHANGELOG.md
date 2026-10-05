@@ -2,10 +2,11 @@
 
 ## 0.2.1 — 2026-10-05
 
-- Clarify cache use, storage behavior and integration instructions.
-- Consolidate storage-performance results and supporting measurements.
+- Retain the original log through a hard link during compaction, avoiding a full backup copy on supported filesystems.
+- Add a bounded-cache benchmark for automatic eviction, write pauses, reads and reopening.
+- Publish cache-latency measurements and updated SQLite/RocksDB comparisons with raw results.
 
-The C++ API, storage behavior and format v1 are unchanged.
+The C++ API and format v1 are unchanged.
 [Release notes](docs/releases/v0.2.1.md).
 
 ## 0.2.0 — 2026-10-05

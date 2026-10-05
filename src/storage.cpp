@@ -37,7 +37,8 @@ void check_offset(std::uint64_t offset, std::size_t length = 0) {
         throw Error(ErrorCode::resource_limit, "file offset exceeds signed 64-bit range", offset);
 }
 } // namespace
-File::File(const std::filesystem::path &path, Mode mode, bool lock_file) {
+File::File(const std::filesystem::path &path, Mode mode, bool lock_file, bool allow_backup_link) {
+    const unsigned allowed_links = mode == Mode::read_only && allow_backup_link ? 2U : 1U;
 #ifdef _WIN32
     auto access = GENERIC_READ | (mode == Mode::read_only ? 0 : GENERIC_WRITE);
     auto creation = lock_file ? OPEN_ALWAYS : mode == Mode::create_exclusive ? CREATE_NEW : OPEN_EXISTING;
@@ -52,7 +53,7 @@ File::File(const std::filesystem::path &path, Mode mode, bool lock_file) {
         SetLastError(error);
         io_error("file info");
     }
-    if ((info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || info.nNumberOfLinks > 1) {
+    if ((info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || info.nNumberOfLinks > allowed_links) {
         CloseHandle(handle_);
         throw Error(ErrorCode::invalid_argument,
                     "database and sidecars must be regular files without hard links");
@@ -75,7 +76,7 @@ File::File(const std::filesystem::path &path, Mode mode, bool lock_file) {
         errno = error;
         io_error("fstat");
     }
-    if (!S_ISREG(info.st_mode) || info.st_nlink > 1) {
+    if (!S_ISREG(info.st_mode) || info.st_nlink > allowed_links) {
         ::close(fd_);
         throw Error(ErrorCode::invalid_argument,
                     "database and sidecars must be regular files without hard links");
@@ -265,5 +266,28 @@ void copy_durable(const File &source, const std::filesystem::path &target) {
         offset += chunk.size();
     }
     copy.sync();
+}
+bool link_backup(const std::filesystem::path &source, const std::filesystem::path &target) {
+#ifdef _WIN32
+    if (CreateHardLinkW(target.c_str(), source.c_str(), nullptr))
+        return true;
+    const auto error = GetLastError();
+    if (error == ERROR_NOT_SUPPORTED || error == ERROR_INVALID_FUNCTION)
+        return false;
+    io_error("link backup");
+#else
+    if (::link(source.c_str(), target.c_str()) == 0)
+        return true;
+    if (errno == EPERM || errno == EOPNOTSUPP || errno == ENOSYS)
+        return false;
+    io_error("link backup");
+#endif
+}
+bool same_file(const std::filesystem::path &first, const std::filesystem::path &second) {
+    std::error_code error;
+    const auto same = std::filesystem::equivalent(first, second, error);
+    if (error)
+        throw Error(ErrorCode::io_error, "compare backup identity: " + error.message());
+    return same;
 }
 } // namespace shutter::detail

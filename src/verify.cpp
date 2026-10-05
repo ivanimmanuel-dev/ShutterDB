@@ -125,7 +125,13 @@ VerifyReport DB::inspect(const std::filesystem::path &path, const Options &optio
         throw Error(ErrorCode::not_found, "database does not exist");
     detail::File lock(detail::sibling(p, ".lock"), detail::File::Mode::read_write, true);
     lock.lock(false);
-    detail::File file(p, detail::File::Mode::read_only);
+    bool linked_backup = false;
+    for (const auto suffix : {".backup", ".backup.tmp"}) {
+        const auto backup = detail::sibling(p, suffix);
+        if (detail::exists(backup) && detail::same_file(p, backup))
+            linked_backup = true;
+    }
+    detail::File file(p, detail::File::Mode::read_only, false, linked_backup);
     return detail::scan(file, options).report;
 }
 VerifyReport DB::verify() const {

@@ -1,0 +1,320 @@
+{
+  "date": "2026-10-05T23:49:31.220823+00:00",
+  "system": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "writes": 4096,
+  "sizes": [
+    4096,
+    65536
+  ],
+  "max_mib": 64,
+  "sync_every": 128,
+  "repeats": 3,
+  "executable_sha256": "4cc70809044aac0093b9bc5189198596dc70f1e118c630c7b4c824587849a8c9",
+  "benchmark_sha256": "d9e0d22b2f082a31138a2abe22ef9cc0c3a5e9262e316530aae18c6e02654e57",
+  "source_sha256": {
+    "src/cache.cpp": "81d46c25e6ac038e7e0aeedf63455f1815d10f1f611e43adff8765920fdb0368",
+    "src/checksum.cpp": "b3eef5cb4737b2b44335c8a23a64d4eec5057c67323b563e7925bb503a89884f",
+    "src/compaction.cpp": "3b4678d7d1e5f5e434708e5a13146bdc983d579928c60fd2412d000c307bd95c",
+    "src/db.cpp": "e2b79ab66a64f304062a74d159233fa5a1ce884d6def1e53e9130049ece2121d",
+    "src/internal.hpp": "3332b72ba2b2df5fad351bba01851967116cd8373430a17aa4063ff931f52e83",
+    "src/record.cpp": "0c27f4be74c43e51ab914b51b78a1bdfd847037b622ab24328071bc952b194b9",
+    "src/storage.cpp": "f47d45bd3d7bd7156090a6653ed0d2423678088ef032e80426d9b0d96a2737b6",
+    "src/verify.cpp": "27e795b2592030a75bbf209ff8e185cd58ba753b14886880491bf011f06dd053",
+    "include/shutter/cache.hpp": "87b95123b970958bb0e44b84c061ec250dc850f79bb97a5d02996a612e17183f",
+    "include/shutter/db.hpp": "807c19a9138c56edac7d1b663f829f76f44da172280adfb9b3c1dc198e6272aa",
+    "include/shutter/options.hpp": "c0b252786eff243f532352314414ce00aa13c33362fb929deecb97e72f7a514e",
+    "include/shutter/result.hpp": "407d3a124a95304ad809b1ce618dcbd77101e5db8f21aa90cf6e0e6999cc33ce",
+    "include/shutter/stats.hpp": "abcc851dafc487af02a149bbe92913eca04639fb11d12f214d60f3637f91b37d"
+  },
+  "complete": true,
+  "results": [
+    {
+      "version": "0.2.1",
+      "seed": 20261005,
+      "writes": 4096,
+      "key_bytes": 64,
+      "value_bytes": 4096,
+      "max_bytes": 67108864,
+      "sync_every": 128,
+      "evictions": 0,
+      "live_keys": 4096,
+      "database_bytes": 17203232,
+      "final_sync_seconds": 0,
+      "reopen_seconds": 0.008976141,
+      "verified": true,
+      "insert": {
+        "operations": 4096,
+        "seconds": 0.177612252,
+        "p50_ms": 0.013035,
+        "p95_ms": 0.048101,
+        "p99_ms": 0.142981,
+        "max_ms": 4.891506
+      },
+      "maintenance_insert": {
+        "operations": 0,
+        "seconds": 0,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "p99_ms": 0,
+        "max_ms": 0
+      },
+      "hit": {
+        "operations": 12288,
+        "seconds": 0.049828919,
+        "p50_ms": 0.003738,
+        "p95_ms": 0.00537,
+        "p99_ms": 0.013476,
+        "max_ms": 0.091394
+      },
+      "miss": {
+        "operations": 0,
+        "seconds": 0,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "p99_ms": 0,
+        "max_ms": 0
+      },
+      "repeat": 1
+    },
+    {
+      "version": "0.2.1",
+      "seed": 20261005,
+      "writes": 4096,
+      "key_bytes": 64,
+      "value_bytes": 65536,
+      "max_bytes": 67108864,
+      "sync_every": 128,
+      "evictions": 3096,
+      "live_keys": 1000,
+      "database_bytes": 65640032,
+      "final_sync_seconds": 0,
+      "reopen_seconds": 0.017002068,
+      "verified": true,
+      "insert": {
+        "operations": 4096,
+        "seconds": 4.564268827,
+        "p50_ms": 0.055446,
+        "p95_ms": 0.143322,
+        "p99_ms": 9.444365,
+        "max_ms": 256.081665
+      },
+      "maintenance_insert": {
+        "operations": 24,
+        "seconds": 3.986741868,
+        "p50_ms": 145.262344,
+        "p95_ms": 234.166437,
+        "p99_ms": 256.081665,
+        "max_ms": 256.081665
+      },
+      "hit": {
+        "operations": 3000,
+        "seconds": 0.064869045,
+        "p50_ms": 0.020069,
+        "p95_ms": 0.028515,
+        "p99_ms": 0.0584,
+        "max_ms": 0.211157
+      },
+      "miss": {
+        "operations": 3096,
+        "seconds": 0.000980148,
+        "p50_ms": 0.000281,
+        "p95_ms": 0.000642,
+        "p99_ms": 0.000842,
+        "max_ms": 0.001694
+      },
+      "repeat": 1
+    },
+    {
+      "version": "0.2.1",
+      "seed": 20261005,
+      "writes": 4096,
+      "key_bytes": 64,
+      "value_bytes": 65536,
+      "max_bytes": 67108864,
+      "sync_every": 128,
+      "evictions": 3096,
+      "live_keys": 1000,
+      "database_bytes": 65640032,
+      "final_sync_seconds": 0,
+      "reopen_seconds": 0.015623741,
+      "verified": true,
+      "insert": {
+        "operations": 4096,
+        "seconds": 3.844921713,
+        "p50_ms": 0.048452,
+        "p95_ms": 0.115129,
+        "p99_ms": 8.810287,
+        "max_ms": 220.404867
+      },
+      "maintenance_insert": {
+        "operations": 24,
+        "seconds": 3.331437989,
+        "p50_ms": 134.935975,
+        "p95_ms": 156.070438,
+        "p99_ms": 220.404867,
+        "max_ms": 220.404867
+      },
+      "hit": {
+        "operations": 3000,
+        "seconds": 0.057477516,
+        "p50_ms": 0.017914,
+        "p95_ms": 0.02642,
+        "p99_ms": 0.042751,
+        "max_ms": 0.119877
+      },
+      "miss": {
+        "operations": 3096,
+        "seconds": 0.000894264,
+        "p50_ms": 0.000251,
+        "p95_ms": 0.000541,
+        "p99_ms": 0.000761,
+        "max_ms": 0.013907
+      },
+      "repeat": 2
+    },
+    {
+      "version": "0.2.1",
+      "seed": 20261005,
+      "writes": 4096,
+      "key_bytes": 64,
+      "value_bytes": 4096,
+      "max_bytes": 67108864,
+      "sync_every": 128,
+      "evictions": 0,
+      "live_keys": 4096,
+      "database_bytes": 17203232,
+      "final_sync_seconds": 0,
+      "reopen_seconds": 0.008489761,
+      "verified": true,
+      "insert": {
+        "operations": 4096,
+        "seconds": 0.184446411,
+        "p50_ms": 0.013195,
+        "p95_ms": 0.027613,
+        "p99_ms": 0.121841,
+        "max_ms": 9.072577
+      },
+      "maintenance_insert": {
+        "operations": 0,
+        "seconds": 0,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "p99_ms": 0,
+        "max_ms": 0
+      },
+      "hit": {
+        "operations": 12288,
+        "seconds": 0.051942453,
+        "p50_ms": 0.003687,
+        "p95_ms": 0.006042,
+        "p99_ms": 0.013395,
+        "max_ms": 0.649129
+      },
+      "miss": {
+        "operations": 0,
+        "seconds": 0,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "p99_ms": 0,
+        "max_ms": 0
+      },
+      "repeat": 2
+    },
+    {
+      "version": "0.2.1",
+      "seed": 20261005,
+      "writes": 4096,
+      "key_bytes": 64,
+      "value_bytes": 4096,
+      "max_bytes": 67108864,
+      "sync_every": 128,
+      "evictions": 0,
+      "live_keys": 4096,
+      "database_bytes": 17203232,
+      "final_sync_seconds": 0,
+      "reopen_seconds": 0.011381651,
+      "verified": true,
+      "insert": {
+        "operations": 4096,
+        "seconds": 0.166981311,
+        "p50_ms": 0.011482,
+        "p95_ms": 0.024987,
+        "p99_ms": 0.13162,
+        "max_ms": 8.408317
+      },
+      "maintenance_insert": {
+        "operations": 0,
+        "seconds": 0,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "p99_ms": 0,
+        "max_ms": 0
+      },
+      "hit": {
+        "operations": 12288,
+        "seconds": 0.052445766,
+        "p50_ms": 0.003697,
+        "p95_ms": 0.006092,
+        "p99_ms": 0.013936,
+        "max_ms": 0.68506
+      },
+      "miss": {
+        "operations": 0,
+        "seconds": 0,
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "p99_ms": 0,
+        "max_ms": 0
+      },
+      "repeat": 3
+    },
+    {
+      "version": "0.2.1",
+      "seed": 20261005,
+      "writes": 4096,
+      "key_bytes": 64,
+      "value_bytes": 65536,
+      "max_bytes": 67108864,
+      "sync_every": 128,
+      "evictions": 3096,
+      "live_keys": 1000,
+      "database_bytes": 65640032,
+      "final_sync_seconds": 0,
+      "reopen_seconds": 0.015458648,
+      "verified": true,
+      "insert": {
+        "operations": 4096,
+        "seconds": 3.352116513,
+        "p50_ms": 0.046599,
+        "p95_ms": 0.109949,
+        "p99_ms": 7.635816,
+        "max_ms": 145.139451
+      },
+      "maintenance_insert": {
+        "operations": 24,
+        "seconds": 2.886513525,
+        "p50_ms": 117.371178,
+        "p95_ms": 141.480445,
+        "p99_ms": 145.139451,
+        "max_ms": 145.139451
+      },
+      "hit": {
+        "operations": 3000,
+        "seconds": 0.054455172,
+        "p50_ms": 0.017082,
+        "p95_ms": 0.023504,
+        "p99_ms": 0.037271,
+        "max_ms": 0.116696
+      },
+      "miss": {
+        "operations": 3096,
+        "seconds": 0.000930028,
+        "p50_ms": 0.00026,
+        "p95_ms": 0.000551,
+        "p99_ms": 0.000922,
+        "max_ms": 0.019156
+      },
+      "repeat": 3
+    }
+  ]
+}

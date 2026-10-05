@@ -405,7 +405,7 @@ TEST_CASE("append failure recovery reflects the last completed write stage") {
 }
 TEST_CASE("injected compaction failures preserve logical contents at every boundary") {
     for (const auto point :
-         {Fault::compaction_start, Fault::temporary_write, Fault::temporary_validation,
+         {Fault::compaction_start, Fault::temporary_write, Fault::temporary_validation, Fault::backup_ready,
           Fault::before_replacement, Fault::after_replacement, Fault::after_directory_sync}) {
         Temp t;
         seed(t.path);
@@ -444,6 +444,39 @@ TEST_CASE("missing or damaged primary recovers from a durable compaction backup"
         }
         DB db(t.path);
         check_seed(db);
+    }
+}
+TEST_CASE("interrupted compaction removes a linked backup before reopening the original") {
+    for (const auto failure : {Fault::backup_ready, Fault::before_replacement}) {
+        Temp t;
+        seed(t.path);
+        const auto original = read_all(t.path);
+        const auto probe = sibling(t.path, ".probe");
+        const bool links_supported = link_backup(t.path, probe);
+        remove_file(probe);
+        {
+            DB db(t.path);
+            fault_hook = [&](Fault point) {
+                if (point == failure) {
+                    const auto suffix = failure == Fault::backup_ready ? ".backup.tmp" : ".backup";
+                    CHECK(same_file(t.path, sibling(t.path, suffix)) == links_supported);
+                    throw Error(ErrorCode::io_error, "interrupted replacement");
+                }
+            };
+            CHECK_THROWS_AS(db.compact(), Error);
+            fault_hook = {};
+            expect_error([&] { db.put("new", "value"); }, ErrorCode::needs_reopen);
+        }
+        CHECK(DB::inspect(t.path).ok());
+        CHECK(std::filesystem::hard_link_count(t.path) == (links_supported ? 2 : 1));
+        DB reopened(t.path);
+        check_seed(reopened);
+        CHECK(read_all(t.path) == original);
+        CHECK(std::filesystem::hard_link_count(t.path) == 1);
+        CHECK_FALSE(detail::exists(sibling(t.path, ".backup")));
+        CHECK_FALSE(detail::exists(sibling(t.path, ".backup.tmp")));
+        reopened.put("new", "value");
+        CHECK(reopened.get_string("new") == "value");
     }
 }
 TEST_CASE("a valid primary wins over an incomplete backup and stale temporary file") {
@@ -651,7 +684,8 @@ TEST_CASE("process termination at append and compaction boundaries recovers on P
     for (const auto point :
          {Fault::before_append, Fault::during_append, Fault::after_append, Fault::before_flush,
           Fault::after_flush, Fault::compaction_start, Fault::temporary_write, Fault::temporary_validation,
-          Fault::before_replacement, Fault::after_replacement, Fault::after_directory_sync}) {
+          Fault::backup_ready, Fault::before_replacement, Fault::after_replacement,
+          Fault::after_directory_sync}) {
         Temp t;
         seed(t.path);
         const auto pid = ::fork();

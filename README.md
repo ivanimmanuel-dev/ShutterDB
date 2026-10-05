@@ -100,8 +100,8 @@ preserves transparency and reuses identical content across filenames and restart
 
 Opening validates the complete log and rebuilds its index. Keep a handle open for
 repeated access; compaction reclaims overwritten and deleted records. The
-[performance results](docs/performance.md) compare writes, reads, reopening and
-maintenance with SQLite and RocksDB.
+[performance results](docs/performance.md) measure bounded-cache eviction and write
+pauses, and compare storage operations with SQLite and RocksDB.
 
 ## Documentation
 
@@ -114,7 +114,7 @@ maintenance with SQLite and RocksDB.
 | [Durability](docs/durability.md) | Synchronization, recovery and backups |
 | [Errors](docs/error-handling.md) | Error codes and verification reports |
 | [Architecture](docs/architecture.md) · [File format](docs/file-format.md) | Storage internals and format v1 |
-| [Performance](docs/performance.md) | Storage comparison, workload and measurements |
+| [Performance](docs/performance.md) | Cache latency, storage comparison and measurements |
 | [Testing](docs/testing.md) | Test suites, sanitizers, stress and fuzzing |
 | [Benchmarks](docs/benchmarks.md) | Build and run the benchmark tools |
 

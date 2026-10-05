@@ -18,7 +18,10 @@ Action action(const char *operation, unsigned &calls) {
     const char *mode = std::getenv("SHUTTER_IO_MODE");
     if (mode && !std::strcmp(mode, "short"))
         return Action::short_io;
-    errno = mode && !std::strcmp(mode, "eintr") ? EINTR : mode && !std::strcmp(mode, "enospc") ? ENOSPC : EIO;
+    errno = mode && !std::strcmp(mode, "eintr")         ? EINTR
+            : mode && !std::strcmp(mode, "enospc")      ? ENOSPC
+            : mode && !std::strcmp(mode, "unsupported") ? EOPNOTSUPP
+                                                        : EIO;
     return Action::fail;
 }
 template <class Function> Function next(const char *name) {
@@ -66,6 +69,13 @@ extern "C" int rename(const char *source, const char *target) {
     static auto real = next<int (*)(const char *, const char *)>("rename");
     static unsigned calls = 0;
     if (action("rename", calls) == Action::fail)
+        return -1;
+    return real(source, target);
+}
+extern "C" int link(const char *source, const char *target) {
+    static auto real = next<int (*)(const char *, const char *)>("link");
+    static unsigned calls = 0;
+    if (action("link", calls) == Action::fail)
         return -1;
     return real(source, target);
 }
