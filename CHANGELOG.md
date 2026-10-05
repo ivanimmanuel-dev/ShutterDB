@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 — Unreleased
+## 0.2.0 — 2026-10-05
 
 - Add `shutter::Cache` with a disk budget, access-based eviction and automatic compaction.
 - Buffer sequential log scans and reuse index entries during replay, retaining full checksum validation.
