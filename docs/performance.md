@@ -1,4 +1,12 @@
-# Asset-cache benchmarks: v0.2.0
+# Performance
+
+ShutterDB v0.2.0 compared with SQLite and RocksDB for binary key-value storage.
+ShutterDB has the lowest batched-write and warm-read times in these measurements;
+SQLite opens files and handles repeated updates faster. ShutterDB rebuilds its
+index by scanning the complete log, so reopening grows more expensive as the log grows.
+
+The workload uses `DB`. Cache-budget enforcement, eviction, image decoding and hashing
+are separate work and are excluded from these timings.
 
 This workload stores 16,384 binary assets, synchronizes every 128 operations and
 performs two rounds of overwrites and deletions before compaction. The two datasets
@@ -61,23 +69,6 @@ checkpoint. ShutterDB verifies the old log and replacement and durably copies a 
 before replacing the log.
 File totals include regular sidecars, WALs, manifests and SST files after close.
 
-## Reopen improvement
-
-The buffered scanner was also compared directly with commit `87e4eae` using the same
-database file. Each group is primed once; old and new engines run in fresh processes
-with alternating order. Both validate the complete log and every resulting value.
-Milliseconds: median (minimum–maximum) of three paired runs.
-
-| Values | Log state | Before | Buffered scanner | Speedup |
-|---|---|---:|---:|---:|
-| 4 KiB | Initial | 92.40 (86.20–100.14) | 34.87 (32.90–44.15) | 2.65× |
-| 4 KiB | After two update rounds | 217.76 (216.73–227.61) | 65.11 (62.58–103.75) | 3.34× |
-| 64 KiB | Initial | 328.50 (290.50–379.56) | 268.80 (247.77–285.16) | 1.22× |
-| 64 KiB | After two update rounds | 892.41 (834.77–988.46) | 545.53 (531.69–610.22) | 1.64× |
-
-Opening remains proportional to log size. Buffering reduces small reads and allocations
-while retaining complete checksum validation.
-
 ## Filesystem-cache eviction requests
 
 A separate 1 GiB run requested `POSIX_FADV_DONTNEED` on each database file before every
@@ -98,8 +89,6 @@ Seconds: median (minimum–maximum), before updates.
 - One client thread; 16,384 random 64-byte ASCII keys; a pseudorandom value template
   stamped with each key’s ID and generation; seed 20261005. RocksDB may use background
   worker threads. Engine order reverses on alternate repetitions.
-- ShutterDB uses the ordinary `DB` API. These timings do not include `Cache` eviction
-  bookkeeping, image decoding or hashing.
 - ShutterDB uses buffered writes with `sync()` every 128 operations. SQLite commits
   transactions of 128 operations with WAL and `synchronous=FULL`. RocksDB writes
   `WriteBatch` groups of 128 operations with `WriteOptions.sync=true`. SQLite and
@@ -132,7 +121,7 @@ cmake --build build-compare --config Release --parallel
 python3 tools/compare-asset-cache.py build-compare/shutter_compare \
   --directory /var/tmp --engines shutter sqlite sqlite-tuned rocksdb \
   --count 16384 --sizes 4096 65536 --modes batch --rounds 2 --repeats 3 \
-  --output comparison.json
+  --output storage.json
 ```
 
 Repeat with `--sizes 65536 --rounds 0 --evict-cache` for the initial-dataset
@@ -142,13 +131,6 @@ builds, set `CMAKE_PREFIX_PATH` for RocksDB, and `SQLite3_INCLUDE_DIR` / `SQLite
 for SQLite. The source hashes and dependency build details below identify these results.
 Use `--modes sync` to synchronize every individual operation.
 
-For a paired reopen comparison, compile this version’s `benchmarks/asset_cache.cpp`
-against each engine revision. Populate and update one database with the current binary,
-then alternate the binaries on the same file using `shutter batch read DIRECTORY 16384
-65536 0` before updates, or `shutter batch reopen DIRECTORY 16384 65536 2` after two
-churn rounds. Prime each group once and retain three measured runs per binary.
-
-Raw data: [v0.2](measurements/asset-cache-v02-after.json) ·
-[eviction requests](measurements/asset-cache-v02-evicted.json) ·
-[paired reopening](measurements/asset-cache-v02-reopen.json) ·
-[environment and dependency builds](measurements/asset-cache-v02-environment.json).
+Raw data: [storage](measurements/storage.json) ·
+[filesystem-cache eviction requests](measurements/storage-eviction.json) ·
+[environment and dependency builds](measurements/environment.json).

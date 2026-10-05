@@ -2,8 +2,8 @@
 
 ## 0.2.1 — 2026-10-05
 
-- Shorten reference documentation and contribution instructions.
-- Keep the current asset-cache benchmark report and supporting measurements.
+- Clarify cache use, storage behavior and integration instructions.
+- Consolidate storage-performance results and supporting measurements.
 
 The C++ API, storage behavior and format v1 are unchanged.
 [Release notes](docs/releases/v0.2.1.md).

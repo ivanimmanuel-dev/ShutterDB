@@ -1,5 +1,6 @@
 {
   "date": "2026-10-05",
+  "shutterdb_version": "0.2.0",
   "cpu": "AMD Ryzen 7 5825U with Radeon Graphics, 16 logical processors exposed",
   "memory_kib": 7014056,
   "os": "Ubuntu 26.04.1 LTS under WSL2",
@@ -16,8 +17,6 @@
   "sqlite_flags": "-O3 -DNDEBUG -DSQLITE_THREADSAFE=1",
   "executable_directory": "/var/tmp (ext4)",
   "crc_path": "SSE4.2 CRC32C selected on this x86-64 CPU",
-  "baseline_engine_ref": "87e4eaed0bfdb95e0ea971c919b5d07da3d64adf",
-  "baseline_harness": "Same workload-v2 benchmark source linked against commit 87e4eae for paired same-file reopen comparisons.",
   "rocksdb_version": "11.8.1",
   "rocksdb_source": "https://github.com/facebook/rocksdb/archive/refs/tags/v11.8.1.tar.gz",
   "rocksdb_archive_sha256": "618d9726a7cb1cf4ce034f4cdca49de98aa64867dda06b91371a791ae8921aff",

@@ -59,5 +59,5 @@ shutter stats --db previews.shdb
 shutter verify --db previews.shdb
 ```
 
-The [storage comparison](asset-cache-v02-results.md) measures ShutterDB, SQLite and
+The [storage comparison](performance.md) measures ShutterDB, SQLite and
 RocksDB without image decoding or hashing in the storage timings.

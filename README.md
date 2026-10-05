@@ -6,9 +6,12 @@
 
 Persistent binary caches for C++20.
 
-Keep generated assets between runs, set a disk budget and reclaim obsolete records
-automatically. ShutterDB stores values on disk and indexes keys in memory. It builds
-as a static library with no dependencies beyond the C++ standard library and OS APIs.
+Store previews, compiled shaders and build artifacts between runs. `Cache` manages a
+disk budget and evicts old entries; `DB` retains values until you delete them. Both
+store binary keys and values in a local file.
+
+ShutterDB builds as a static library with no dependencies beyond the C++ standard
+library and OS APIs.
 
 ```cpp
 #include <shutter/cache.hpp>
@@ -95,9 +98,10 @@ Use content hashes as keys for previews, compiled shaders and build artifacts. T
 [image example](docs/asset-cache.md) turns PNG/JPEG sources into cached PNG previews,
 preserves transparency and reuses identical content across filenames and restarts.
 
-The [SQLite and RocksDB comparison](docs/asset-cache-v02-results.md) measures batched
-ingestion, reads, updates, reopening and compaction on 64 MiB and 1 GiB datasets.
-It includes the workload, environment, raw results and commands to reproduce the runs.
+Opening validates the complete log and rebuilds its index. Keep a handle open for
+repeated access; compaction reclaims overwritten and deleted records. The
+[performance results](docs/performance.md) compare writes, reads, reopening and
+maintenance with SQLite and RocksDB.
 
 ## Documentation
 
@@ -110,7 +114,8 @@ It includes the workload, environment, raw results and commands to reproduce the
 | [Durability](docs/durability.md) | Synchronization, recovery and backups |
 | [Errors](docs/error-handling.md) | Error codes and verification reports |
 | [Architecture](docs/architecture.md) · [File format](docs/file-format.md) | Storage internals and format v1 |
-| [Testing](docs/testing.md) | Test suites, sanitizers, fuzzing and package checks |
-| [Benchmarks](docs/benchmarks.md) | Workloads, methodology and results |
+| [Performance](docs/performance.md) | Storage comparison, workload and measurements |
+| [Testing](docs/testing.md) | Test suites, sanitizers, stress and fuzzing |
+| [Benchmarks](docs/benchmarks.md) | Build and run the benchmark tools |
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [MIT license](LICENSE)

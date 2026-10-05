@@ -12,15 +12,15 @@ All suites use temporary databases; set `TMPDIR` on POSIX to select the filesyst
 | Suite | Coverage |
 |---|---|
 | `engine` | Reads, writes, limits, locks, recovery, compaction, CRCs, scan boundaries and bounded-cache behavior |
-| `parser_smoke` | 20,000 seeded mutations and every truncation of a fixture |
+| `parser_smoke` | Seeded parser mutations and truncated records |
 | `public_api_example` | Public headers and basic operations |
 | `cli` | Separate-process persistence, binary I/O, JSON and exit codes |
-| `corruption` | 28 damaged-file cases with checked diagnostics and recovery behavior |
-| `syscall_faults` | 24 Linux scenarios for short I/O, EINTR, ENOSPC, sync, truncate and rename failures |
+| `corruption` | Damaged-file diagnostics and recovery behavior |
+| `syscall_faults` | Linux short I/O, EINTR, ENOSPC, sync, truncate and rename failures |
 | `asset_cache` (optional) | PNG/JPEG pixels, alpha, restart reuse, content changes, batching, eviction and malformed inputs |
 
-The engine tests inject failures and terminate POSIX child processes at eleven append,
-sync and compaction boundaries. The Linux syscall suite uses a test-only interposer.
+The engine suite tests recovery after interrupted writes and compaction. The Linux
+syscall suite uses a test-only interposer.
 
 Enable `SHUTTER_BUILD_ASSET_CACHE` with OpenSSL, PNG and JPEG development libraries,
 and Python Pillow installed to include the preview test.
@@ -68,7 +68,7 @@ Targets use libFuzzer with ASan/UBSan. `record` exercises decoding and payload c
 report invariants. The scanner harness limits inputs to 1 MiB and the index to 128 keys
 and 1 MiB. Fuzz callbacks use in-memory input; syscall failures have a separate suite.
 
-Set `-max_total_time` to the desired run length. CI runs 30 seconds per target.
+Set `-max_total_time` to the desired run length.
 
 ## Formatting and analysis
 

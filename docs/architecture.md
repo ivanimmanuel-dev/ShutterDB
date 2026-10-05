@@ -1,8 +1,7 @@
 # Architecture
 
 ShutterDB stores data in an append-only log with an in-memory key index. `DB` owns the
-storage; `Cache` adds access tracking and eviction. Both hide their implementations
-behind the public headers. Storage, format and index types live in `src/`.
+storage; `Cache` adds access tracking and eviction.
 
 ```text
 put/remove -> validate and reserve index node -> encode -> append -> optional OS sync -> index
