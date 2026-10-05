@@ -1,64 +1,70 @@
-# Preview cache
+# PNG/JPEG preview cache
 
-The example builds 128-pixel previews of P6 PPM images and stores them in ShutterDB.
-It hashes the source bytes with SHA-256, so an unchanged image reuses its preview across
-process restarts. Identical files share an entry, even under different names. A content
-change generates a new preview regardless of the file's timestamp.
+The example creates PNG previews of PNG and JPEG sources, with the longest edge at
+most 128 pixels. A SHA-256 content key lets it reuse previews across process restarts
+and share entries between identical files. The cache enforces a disk budget and
+automatically evicts old entries and reclaims obsolete records.
 
 ## Build and run
 
-The example uses OpenSSL for SHA-256. On Ubuntu, install `libssl-dev`, then build:
+The example uses OpenSSL, libpng 1.6+ and libjpeg. On Ubuntu:
 
 ```sh
+sudo apt-get install libssl-dev libpng-dev libjpeg-dev python3-pil
 cmake -S . -B build-assets -DCMAKE_BUILD_TYPE=Release -DSHUTTER_BUILD_ASSET_CACHE=ON
 cmake --build build-assets --config Release --parallel
-build-assets/shutter_asset_cache previews.shdb ./images ./previews
+build-assets/shutter_asset_cache previews.shdb ./images ./previews --max-mib 1024
 ```
 
-Use a directory of binary P6 `.ppm` images, up to 4096 × 4096 pixels with 8-bit RGB.
+Pillow is used only by the integration tests. The C++ library and ordinary CLI do not
+depend on these image libraries.
+
+The program reads a flat input directory containing `.png`, `.jpg` or `.jpeg` files
+(case insensitive). Each image may be up to 4096 × 4096 pixels and 64 MiB encoded.
 The output directory must be separate from the inputs and database directory.
-The longest preview edge is at most 128 pixels; the example averages source pixels
-within each output pixel. It writes the previews as PPM files.
 
-Each run prints JSON with generated previews, cache hits, stored keys, cache bytes
-and elapsed time. Run it again to reuse the stored previews. The timing includes
-opening the database, reading and hashing sources, and writing output files.
+Outputs retain the original filename and append `.png`: `photo.jpg → photo.jpg.png`.
+This keeps `photo.jpg` and `photo.png` distinct. Small images are not enlarged.
+Downsampling averages pixels with alpha weighting, so transparent borders do not
+introduce colored fringes. Metadata such as EXIF orientation is not applied.
 
-The storage calls are in [examples/asset_cache.cpp](../examples/asset_cache.cpp):
+The optional `--max-mib` argument defaults to 1024. The budget covers the database file;
+generated output files are separate. Compaction needs temporary disk space beyond
+the steady-state budget. See [cache behavior](cache.md#budget-and-eviction).
+
+## Reuse and invalidation
+
+Each run prints JSON with generated previews, hits, stored keys, database bytes,
+budget, evictions and elapsed time. Run it again to reuse the stored previews.
+Timing includes open, source reads and hashing, rendering on misses, cache maintenance,
+synchronization and output writes.
+
+The storage calls in [examples/asset_cache.cpp](../examples/asset_cache.cpp) are:
 
 ```cpp
-auto preview = db.get_string(key);
+auto preview = cache.get_string(key);
 if (!preview) {
     preview = Image(source).preview();
-    db.put(key, *preview);
+    cache.put(key, *preview);
 }
 ```
 
-The key includes the renderer version, output size and source digest:
-`preview-v1:128:<sha256>`. Changing the renderer should change its version prefix.
-The example buffers writes and calls `sync()` every 128 new previews and at the end.
-After a crash, any lost previews can be regenerated from the source images.
+The key is `preview-v2:128:<sha256>`. A content change produces a new key even if the
+file size and timestamp remain unchanged. Changing the renderer should change the
+version prefix. Writes synchronize every 128 generated previews and at the end.
+A lost or evicted preview can be regenerated from its source.
 
-## Maintenance
-
-Content changes create new entries. When an old asset version expires, remove its key
-and compact the log to reclaim its bytes:
-
-```sh
-shutter delete 'preview-v1:128:<old-sha256>' --db previews.shdb
-shutter compact --db previews.shdb
-shutter verify --db previews.shdb
-```
-
-The example leaves expiry decisions to the application. The integration test covers
-exact preview pixels, restart reuse, content changes with an unchanged timestamp,
-identical-file reuse, deletion and compaction:
+## Test and inspect
 
 ```sh
 ctest --test-dir build-assets -R asset_cache --output-on-failure
+shutter stats --db previews.shdb
+shutter verify --db previews.shdb
 ```
 
-## Storage performance
+The integration test checks exact PNG pixels, JPEG decoding, transparency, small images,
+duplicate content, same-size/timestamp changes, restart reuse, batching, bounded growth,
+eviction and malformed inputs.
 
-The [SQLite comparison](asset-cache-results.md) measures the storage operations on
-4–64 KiB binary assets. Image loading, hashing and rendering are outside those timings.
+The [storage comparison](asset-cache-v02-results.md) measures ShutterDB, SQLite and
+RocksDB without image decoding or hashing in the storage timings.

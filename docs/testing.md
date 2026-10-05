@@ -11,20 +11,21 @@ All suites use temporary databases; set `TMPDIR` on POSIX to select the filesyst
 
 | Suite | Coverage |
 |---|---|
-| `engine` | Reads, writes, deletes, limits, locks, recovery, compaction, process exits and CRC implementations |
+| `engine` | Reads, writes, limits, locks, recovery, compaction, CRCs, scan boundaries and bounded-cache behavior |
 | `parser_smoke` | 20,000 seeded mutations and every truncation of a fixture |
 | `public_api_example` | Public headers and basic operations |
 | `cli` | Separate-process persistence, binary I/O, JSON and exit codes |
 | `corruption` | 28 damaged-file cases with checked diagnostics and recovery behavior |
 | `syscall_faults` | 24 Linux scenarios for short I/O, EINTR, ENOSPC, sync, truncate and rename failures |
-| `asset_cache` (optional) | Exact preview pixels, restart reuse, content invalidation, batching and maintenance |
+| `asset_cache` (optional) | PNG/JPEG pixels, alpha, restart reuse, content changes, batching, eviction and malformed inputs |
 
 The engine tests inject failures at eleven append, sync and compaction boundaries.
 POSIX tests also terminate child processes at those boundaries. The Linux syscall suite
 uses a test-only interposer, excluded from installed builds and ASan configurations.
 
-Enable `SHUTTER_BUILD_ASSET_CACHE` with OpenSSL installed to include the preview test.
-CI also runs the [SQLite comparison](asset-cache-results.md) on a small dataset and
+Enable `SHUTTER_BUILD_ASSET_CACHE` with OpenSSL, PNG and JPEG development libraries,
+and Python Pillow installed to include the preview test.
+CI also runs the [SQLite/RocksDB comparison](asset-cache-v02-results.md) on a small dataset and
 checks every value after insertion, overwrites, deletion, compaction and reopening.
 
 ## Sanitizers
@@ -75,7 +76,7 @@ and add a regression test for each fix. CI runs 30 seconds per target.
 
 ## Formatting and analysis
 
-Format project-owned C++ with clang-format 21. Enable the configured clang-tidy checks
+Format project-owned C and C++ with clang-format 21. Enable the configured clang-tidy checks
 with `-DSHUTTER_CLANG_TIDY=ON -DSHUTTER_BUILD_TESTS=OFF`.
 
 CI covers GCC/Clang Debug and Release, Windows MSVC, macOS, sanitizers, fuzzing, stress,

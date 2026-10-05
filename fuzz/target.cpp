@@ -6,8 +6,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t *data, std::size_t size
         if (size >= shutter::detail::record_header_size) {
             auto h = shutter::detail::decode_header(bytes.first(shutter::detail::record_header_size), 0);
             if (h.total_size <= size) {
-                shutter::fuzz::MemoryReader reader(bytes);
-                (void)shutter::detail::payload(reader, h, 0);
+                (void)shutter::detail::payload(bytes, h, 0);
             }
         } else
             (void)shutter::detail::plausible_partial_header(bytes);

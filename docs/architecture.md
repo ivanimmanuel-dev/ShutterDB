@@ -1,6 +1,8 @@
 # Architecture
 
-ShutterDB stores data in an append-only log. Public headers expose an owning `DB` with a private implementation; storage, format, checksums and index types live in `src/`.
+ShutterDB stores data in an append-only log. Public headers expose `DB` and the bounded
+`Cache`, both with private implementations. Storage, format, checksums and index types
+live in `src/`.
 
 ```text
 put/remove -> validate and reserve index node -> encode -> append -> optional OS sync -> index
@@ -14,6 +16,16 @@ Reads use the indexed record size to fetch a complete record in one operation, t
 validate its header, payload checksum and key before returning the value. CRC32C uses
 x86-64 SSE4.2 instructions when detected at runtime, with a portable slicing-by-eight
 implementation for other CPUs. Both produce the same format-v1 checksum.
+
+Opening and verification read the log through a reusable 1 MiB window, growing it
+for an individual record when necessary. Records in the window are checksummed
+without allocating a separate payload buffer. Replay updates existing index entries
+in place when a key is overwritten. All headers and payloads are still validated;
+opening remains proportional to the log's total bytes and records.
+
+`Cache` wraps the database with an access-order list and a key-to-list lookup. It
+evicts entries under capacity pressure and invokes ordinary verified compaction.
+Read recency is kept in memory; restart order comes from record sequence numbers.
 
 ## Writing and failure
 

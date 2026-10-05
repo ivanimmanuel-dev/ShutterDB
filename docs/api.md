@@ -2,6 +2,8 @@
 
 Include `<shutter/db.hpp>` and link `ShutterDB::ShutterDB`.
 
+For regenerable data with eviction and a disk budget, use [Cache](cache.md).
+
 ## Open a database
 
 ```cpp

@@ -9,6 +9,11 @@
 #include <random>
 #include <shutter/db.hpp>
 #include <sqlite3.h>
+#ifdef SHUTTER_HAVE_ROCKSDB
+#include <rocksdb/db.h>
+#include <rocksdb/version.h>
+#include <rocksdb/write_batch.h>
+#endif
 #ifndef _WIN32
 #include <sys/resource.h>
 #endif
@@ -56,6 +61,7 @@ struct Store {
     virtual std::optional<Bytes> get(std::string_view key) = 0;
     virtual void remove(std::string_view key) = 0;
     virtual void compact() = 0;
+    virtual void close() {}
 };
 class Shutter final : public Store {
     shutter::DB db_;
@@ -168,31 +174,99 @@ class SQLite final : public Store {
         check(sqlite3_wal_checkpoint_v2(db_.get(), nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr));
     }
 };
+#ifdef SHUTTER_HAVE_ROCKSDB
+class Rocks final : public Store {
+    std::unique_ptr<rocksdb::DB> db_;
+    rocksdb::WriteBatch pending_;
+    rocksdb::WriteOptions writes_;
+    bool batch_;
+    static void check(const rocksdb::Status &status) {
+        if (!status.ok())
+            throw std::runtime_error(status.ToString());
+    }
+    static rocksdb::Slice slice(std::string_view key) { return {key.data(), key.size()}; }
+
+  public:
+    Rocks(const std::filesystem::path &path, bool batch, bool create) : batch_(batch) {
+        rocksdb::Options options;
+        options.create_if_missing = create;
+        options.compression = rocksdb::kNoCompression;
+#if ROCKSDB_MAJOR >= 11
+        check(rocksdb::DB::Open(options, path.string(), &db_));
+#else
+        rocksdb::DB *raw = nullptr;
+        check(rocksdb::DB::Open(options, path.string(), &raw));
+        db_.reset(raw);
+#endif
+        writes_.sync = true;
+    }
+    void begin() override { pending_.Clear(); }
+    void finish() override {
+        if (batch_)
+            check(db_->Write(writes_, &pending_));
+    }
+    void put(std::string_view key, std::span<const std::byte> value) override {
+        const rocksdb::Slice bytes(reinterpret_cast<const char *>(value.data()), value.size());
+        if (batch_)
+            check(pending_.Put(slice(key), bytes));
+        else
+            check(db_->Put(writes_, slice(key), bytes));
+    }
+    std::optional<Bytes> get(std::string_view key) override {
+        rocksdb::PinnableSlice value;
+        const auto status = db_->Get(rocksdb::ReadOptions{}, db_->DefaultColumnFamily(), slice(key), &value);
+        if (status.IsNotFound())
+            return std::nullopt;
+        check(status);
+        Bytes owned(value.size());
+        std::memcpy(owned.data(), value.data(), value.size());
+        return owned;
+    }
+    void remove(std::string_view key) override {
+        if (batch_)
+            check(pending_.Delete(slice(key)));
+        else
+            check(db_->Delete(writes_, slice(key)));
+    }
+    void compact() override {
+        rocksdb::FlushOptions flush;
+        flush.wait = true;
+        check(db_->Flush(flush));
+        check(db_->CompactRange(rocksdb::CompactRangeOptions{}, nullptr, nullptr));
+    }
+    void close() override { check(db_->Close()); }
+};
+#endif
 std::uint64_t disk_bytes(const std::filesystem::path &directory) {
     std::uint64_t size = 0;
-    for (const auto &entry : std::filesystem::directory_iterator(directory))
+    for (const auto &entry : std::filesystem::recursive_directory_iterator(directory))
         if (entry.is_regular_file())
             size += entry.file_size();
     return size;
 }
-void stamp(Bytes &value, std::size_t id, bool updated) {
+void stamp(Bytes &value, std::size_t id, std::size_t generation) {
     for (unsigned i = 0; i < 8; ++i)
         value[i] = std::byte((static_cast<std::uint64_t>(id) >> (i * 8)) & 255);
-    value[8] = std::byte(updated ? 1 : 0);
+    value[8] = std::byte(generation);
 }
 } // namespace
 
 int main(int argc, char **argv) {
     try {
-        if (argc != 7)
-            throw std::runtime_error("usage: shutter_compare ENGINE MODE PHASE DIRECTORY COUNT VALUE_BYTES");
+        if (argc != 8)
+            throw std::runtime_error(
+                "usage: shutter_compare ENGINE MODE PHASE DIRECTORY COUNT VALUE_BYTES ROUND");
         const std::string engine = argv[1], mode = argv[2], phase = argv[3];
         const std::filesystem::path directory = argv[4];
         const auto count = number(argv[5]), value_size = number(argv[6]);
-        if ((engine != "shutter" && engine != "sqlite" && engine != "sqlite-tuned") ||
+        const auto round = number(argv[7]);
+        if ((engine != "shutter" && engine != "sqlite" && engine != "sqlite-tuned" && engine != "rocksdb") ||
             (mode != "sync" && mode != "batch") ||
-            (phase != "populate" && phase != "read" && phase != "churn" && phase != "reopen") || count < 4 ||
-            count > 100000 || count % 4 || value_size < 16 || value_size > shutter::max_value_size)
+            (phase != "populate" && phase != "read" && phase != "churn" && phase != "reopen" &&
+             phase != "compact" && phase != "compacted-read") ||
+            count < 4 || count > 100000 || count % 4 || value_size < 16 ||
+            value_size > shutter::max_value_size || round > 255 ||
+            ((phase == "populate" || phase == "read") != (round == 0)))
             throw std::runtime_error("invalid comparison configuration");
         const auto path = directory / "cache.db";
         const bool create = phase == "populate", batch = mode == "batch";
@@ -217,6 +291,13 @@ int main(int argc, char **argv) {
         std::unique_ptr<Store> db;
         if (engine == "shutter")
             db = std::make_unique<Shutter>(path, batch, create);
+#ifdef SHUTTER_HAVE_ROCKSDB
+        else if (engine == "rocksdb")
+            db = std::make_unique<Rocks>(path, batch, create);
+#else
+        else if (engine == "rocksdb")
+            throw std::runtime_error("configure with SHUTTER_COMPARE_ROCKSDB=ON to enable RocksDB");
+#endif
         else
             db = std::make_unique<SQLite>(path, batch, create, engine == "sqlite-tuned");
         const auto open_seconds = elapsed(start);
@@ -224,27 +305,34 @@ int main(int argc, char **argv) {
         double compact_seconds = 0;
         std::size_t writes = 0, hits = 0, misses = 0;
         std::uint64_t consumed = 0, before_compact = 0, after_compact = 0;
-        const bool changed = phase == "churn" || phase == "reopen";
+        const bool changed = round != 0;
         if (create || phase == "churn") {
             const auto begin = Clock::now();
+            auto write = [&](auto operation) {
+                if (writes % 128 == 0)
+                    db->begin();
+                operation();
+                if (++writes % 128 == 0)
+                    db->finish();
+            };
             for (const auto id : order) {
                 if (!create && id % 4 == 3)
                     continue;
-                if (writes % 128 == 0)
-                    db->begin();
-                if (!create && id % 4 == 1)
-                    db->remove(keys[id]);
-                else {
-                    stamp(value, id, !create);
-                    db->put(keys[id], value);
+                if (!create && id % 4 == 1) {
+                    if (round > 1) {
+                        stamp(value, id, round);
+                        write([&] { db->put(keys[id], value); });
+                    }
+                    write([&] { db->remove(keys[id]); });
+                } else {
+                    stamp(value, id, round);
+                    write([&] { db->put(keys[id], value); });
                 }
-                if (++writes % 128 == 0)
-                    db->finish();
             }
             if (writes % 128)
                 db->finish();
             write_seconds = elapsed(begin);
-        } else {
+        } else if (phase != "compact") {
             for (int pass = 0; pass < 4; ++pass) {
                 const auto begin = Clock::now();
                 for (const auto id : order) {
@@ -278,14 +366,14 @@ int main(int argc, char **argv) {
                 if (actual.has_value() != present)
                     throw std::runtime_error("presence check failed");
                 if (present) {
-                    stamp(value, id, changed && id % 2 == 0);
+                    stamp(value, id, changed && id % 2 == 0 ? round : 0);
                     if (*actual != value)
                         throw std::runtime_error("full value check failed");
                 }
             }
         };
         verify();
-        if (phase == "churn") {
+        if (phase == "compact") {
             before_compact = disk_bytes(directory);
             const auto begin = Clock::now();
             db->compact();
@@ -295,11 +383,16 @@ int main(int argc, char **argv) {
         }
         const auto active_bytes = disk_bytes(directory);
         const auto close_begin = Clock::now();
+        db->close();
         db.reset();
         const auto close_seconds = elapsed(close_begin);
         std::cout << std::setprecision(10) << "{\"engine\":\"" << engine << "\",\"mode\":\"" << mode
-                  << "\",\"phase\":\"" << phase << "\",\"count\":" << count
+                  << "\",\"phase\":\"" << phase << "\",\"round\":" << round << ",\"count\":" << count
                   << ",\"value_bytes\":" << value_size << ",\"sqlite_version\":\"" << sqlite3_libversion()
+#ifdef SHUTTER_HAVE_ROCKSDB
+                  << "\",\"rocksdb_version\":\"" << ROCKSDB_MAJOR << '.' << ROCKSDB_MINOR << '.'
+                  << ROCKSDB_PATCH
+#endif
                   << "\",\"open_seconds\":" << open_seconds << ",\"write_seconds\":" << write_seconds
                   << ",\"writes\":" << writes << ",\"first_pass_seconds\":" << first_pass_seconds
                   << ",\"warm_read_seconds\":" << warm_read_seconds << ",\"hits\":" << hits

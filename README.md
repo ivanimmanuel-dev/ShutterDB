@@ -4,38 +4,40 @@
 [![Release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Embedded key-value storage for C++20 asset caches and local application data.
-ShutterDB stores binary keys and values in a checksummed, append-only log.
-Link the library and open a file.
+An embedded C++20 database for generated assets and disk caches.
+Store binary data in a checksummed log, set a disk budget and reuse it across restarts.
+The library and CLI have no third-party runtime dependencies.
 
 ```cpp
-#include <shutter/db.hpp>
+#include <shutter/cache.hpp>
 #include <iostream>
 
 int main() {
-    shutter::DB db("app.shdb");
-    db.put("hello", "world");
+    shutter::Cache cache("assets.shdb", {.max_bytes = 256 * 1024 * 1024});
+    cache.put("hello", "world");
+    cache.sync();
 
-    if (auto value = db.get_string("hello")) {
+    if (auto value = cache.get_string("hello")) {
         std::cout << *value << '\n';
     }
 }
 ```
 
-- **Synchronous writes by default**, with buffered writes and explicit `sync()` available.
+- **Bounded caches** with least-recently-used eviction and automatic compaction.
+- **Batched writes** with explicit `sync()`, or synchronization on each write.
 - **CRC32C checksums** on file headers, record headers, keys and values.
 - **Values on disk**, with keys and record locations held in memory.
 - **Recovery and compaction**, plus a CLI for inspection and binary I/O.
-- **One CMake target**, with no third-party runtime dependencies.
+- **One CMake target** for the cache and the ordinary key-value database.
 
-v0.1.0 is experimental. CI covers Linux, Windows and macOS. Each database has one owning
-handle; calls on that handle are serialized. See [durability](docs/durability.md) for write
-and recovery semantics.
+Use [`Cache`](docs/cache.md) for data you can regenerate, or [`DB`](docs/api.md) to retain
+records until explicitly deleted. Cache writes are buffered by default; DB writes are
+synchronized by default. CI covers Linux, Windows and macOS. Each file has one owning
+handle, with serialized calls. See [durability](docs/durability.md) for recovery semantics.
 
 ## Install
 
-Download [source, Linux x64 or Windows x64 packages](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0),
-or build from source with CMake 3.21+ and a C++20 compiler:
+Build the current v0.2 development version with CMake 3.21+ and a C++20 compiler:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -45,6 +47,8 @@ ctest --test-dir build -C Release --output-on-failure
 
 The CLI is `build/shutter`, or `build/Release/shutter.exe` with Visual Studio.
 Python 3 enables the CLI and fault-injection test suites.
+The [v0.1.0 packages](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0)
+contain the original DB API and predate the bounded cache and image example.
 
 ## Use in your project
 
@@ -82,13 +86,17 @@ The [CLI reference](docs/cli.md) covers commands, JSON output and exit codes.
 ## Asset caches
 
 Use content hashes as keys to store previews, compiled shaders or generated assets.
-The [preview-cache example](docs/asset-cache.md) builds image previews, reuses them
-across restarts and shares entries between identical source files.
+The [preview-cache example](docs/asset-cache.md) reads PNG/JPEG images, writes PNG
+previews with transparency, shares entries between identical files and bounds its cache.
 
-In the [SQLite comparison](docs/asset-cache-results.md), ShutterDB ingested batches of
-4–64 KiB assets **1.58–2.81× faster** than the faster SQLite configuration tested on one
-Ryzen 7 / WSL2 system. The report includes SQLite's wins, raw results and a runnable harness.
-The example and engine optimizations are available on `main`; v0.1.0 packages predate them.
+The [RocksDB and SQLite comparison](docs/asset-cache-v02-results.md) measures 64 MiB
+and 1 GiB datasets, repeated updates, reopen time and compaction. It includes raw results,
+tradeoffs and a runnable harness. Paired local tests measured **1.22–3.34× faster reopening**
+than the previous engine. The report records the shared-host conditions behind those numbers.
+
+For a Roblox project, ShutterDB can run in development tools or behind an external API.
+The [Roblox guide](docs/roblox.md) explains the integration and which data belongs in
+Roblox DataStores.
 
 ## Documentation
 
@@ -96,6 +104,7 @@ The example and engine optimizations are available on `main`; v0.1.0 packages pr
 |---|---|
 | [Getting started](docs/getting-started.md) | Build, install, vendor and link |
 | [C++ API](docs/api.md) | Operations, options, ownership and limits |
+| [Bounded cache](docs/cache.md) · [Image example](docs/asset-cache.md) | Disk budgets, eviction and PNG/JPEG previews |
 | [CLI](docs/cli.md) | Commands and examples |
 | [Durability](docs/durability.md) | Synchronization, recovery and backups |
 | [Errors](docs/error-handling.md) | Error codes and verification reports |

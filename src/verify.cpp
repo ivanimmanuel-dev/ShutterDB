@@ -2,12 +2,34 @@
 #include <algorithm>
 
 namespace shutter::detail {
-Bytes payload(const Reader &reader, const RecordHeader &header, std::uint64_t offset) {
-    const auto n = reader.size();
-    if (offset > n || header.total_size > n - offset)
+namespace {
+class ScanBuffer {
+    const Reader &reader_;
+    std::uint64_t size_, start_ = 0;
+    Bytes bytes_;
+
+  public:
+    ScanBuffer(const Reader &reader, std::uint64_t size) : reader_(reader), size_(size) {}
+    std::span<const std::byte> view(std::uint64_t offset, std::size_t count) {
+        if (offset > size_ || count > size_ - offset)
+            throw Error(ErrorCode::corruption, "scan exceeds database size", offset);
+        if (offset < start_ || offset - start_ > bytes_.size() ||
+            count > bytes_.size() - static_cast<std::size_t>(offset - start_)) {
+            const auto length =
+                std::min<std::uint64_t>(size_ - offset, std::max<std::size_t>(1024 * 1024, count));
+            bytes_.resize(static_cast<std::size_t>(length));
+            reader_.read(offset, bytes_);
+            start_ = offset;
+        }
+        return std::span(bytes_).subspan(static_cast<std::size_t>(offset - start_), count);
+    }
+};
+} // namespace
+std::span<const std::byte> payload(std::span<const std::byte> record, const RecordHeader &header,
+                                   std::uint64_t offset) {
+    if (header.total_size > record.size())
         throw Error(ErrorCode::corruption, "truncated record payload", offset);
-    Bytes bytes(static_cast<std::size_t>(header.key_size) + header.value_size);
-    reader.read(offset + record_header_size, bytes);
+    const auto bytes = record.subspan(record_header_size, header.total_size - record_header_size);
     const auto actual = crc32c(bytes);
     if (actual != header.payload_crc)
         throw Error(ErrorCode::corruption, "payload CRC32C mismatch", offset, header.payload_crc, actual);
@@ -19,10 +41,10 @@ Scan scan(const Reader &reader, const Options &options) {
     auto &stats = report.stats;
     stats.sync_writes = options.sync_writes;
     stats.database_bytes = reader.size();
+    ScanBuffer buffer(reader, stats.database_bytes);
     try {
-        Bytes header(
-            static_cast<std::size_t>(std::min<std::uint64_t>(file_header_size, stats.database_bytes)));
-        reader.read(0, header);
+        const auto header = buffer.view(
+            0, static_cast<std::size_t>(std::min<std::uint64_t>(file_header_size, stats.database_bytes)));
         stats.last_sequence = decode_file_header(header);
         report.header_valid = true;
         report.valid_bytes = file_header_size;
@@ -30,8 +52,8 @@ Scan scan(const Reader &reader, const Options &options) {
         while (report.valid_bytes < stats.database_bytes) {
             const auto offset = report.valid_bytes;
             const auto remaining = stats.database_bytes - offset;
-            Bytes bytes(static_cast<std::size_t>(std::min<std::uint64_t>(record_header_size, remaining)));
-            reader.read(offset, bytes);
+            const auto bytes = buffer.view(
+                offset, static_cast<std::size_t>(std::min<std::uint64_t>(record_header_size, remaining)));
             if (remaining < record_header_size) {
                 if (!plausible_partial_header(bytes))
                     throw Error(ErrorCode::corruption, "unexpected bytes after final record", offset);
@@ -47,25 +69,32 @@ Scan scan(const Reader &reader, const Options &options) {
                 report.truncated_tail = true;
                 break;
             }
-            auto data = payload(reader, h, offset);
-            std::string key(reinterpret_cast<const char *>(data.data()), h.key_size);
+            const auto data = payload(buffer.view(offset, h.total_size), h, offset);
+            const std::string_view key(reinterpret_cast<const char *>(data.data()), h.key_size);
             auto entry = result.index.find(key);
-            if (entry != result.index.end()) {
-                stats.live_bytes -= entry->second.total_size;
-                result.index_bytes -= key.size() + 128;
-                result.index.erase(entry);
-            }
             if (h.kind == Kind::put) {
-                const auto cost = key.size() + 128;
-                if (result.index.size() >= options.max_live_keys || cost > options.max_index_bytes ||
-                    result.index_bytes > options.max_index_bytes - cost)
-                    throw Error(ErrorCode::resource_limit, "in-memory index budget exceeded", offset);
-                result.index.emplace(std::move(key), Entry{offset, h.sequence, h.total_size, h.value_size});
-                result.index_bytes += cost;
+                const Entry next{offset, h.sequence, h.total_size, h.value_size};
+                if (entry == result.index.end()) {
+                    const auto cost = key.size() + 128;
+                    if (result.index.size() >= options.max_live_keys || cost > options.max_index_bytes ||
+                        result.index_bytes > options.max_index_bytes - cost)
+                        throw Error(ErrorCode::resource_limit, "in-memory index budget exceeded", offset);
+                    result.index.emplace(std::string(key), next);
+                    result.index_bytes += cost;
+                } else {
+                    stats.live_bytes -= entry->second.total_size;
+                    entry->second = next;
+                }
                 stats.live_bytes += h.total_size;
                 ++stats.put_records;
-            } else
+            } else {
+                if (entry != result.index.end()) {
+                    stats.live_bytes -= entry->second.total_size;
+                    result.index_bytes -= key.size() + 128;
+                    result.index.erase(entry);
+                }
                 ++stats.tombstones;
+            }
             ++stats.records;
             stats.last_sequence = std::max(stats.last_sequence, h.sequence);
             previous_sequence = h.sequence;

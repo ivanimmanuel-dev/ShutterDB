@@ -148,10 +148,7 @@ std::optional<Bytes> DB::get(std::string_view key) const {
     if (h.kind != Kind::put || h.sequence != entry.sequence || h.total_size != entry.total_size ||
         h.key_size != key.size())
         throw Error(ErrorCode::corruption, "record no longer matches the index", entry.offset);
-    const auto data = std::span(bytes).subspan(record_header_size);
-    const auto actual = crc32c(data);
-    if (actual != h.payload_crc)
-        throw Error(ErrorCode::corruption, "payload CRC32C mismatch", entry.offset, h.payload_crc, actual);
+    const auto data = payload(bytes, h, entry.offset);
     if (std::string_view(reinterpret_cast<const char *>(data.data()), h.key_size) != key)
         throw Error(ErrorCode::corruption, "record no longer matches the index", entry.offset);
     bytes.erase(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(record_header_size + h.key_size));

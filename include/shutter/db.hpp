@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace shutter {
-inline constexpr std::string_view version = "0.1.0";
+inline constexpr std::string_view version = "0.2.0";
 class DB {
   public:
     explicit DB(const std::filesystem::path &path, const Options &options = {});
@@ -35,6 +35,7 @@ class DB {
     static VerifyReport inspect(const std::filesystem::path &path, const Options &options = {});
 
   private:
+    friend class Cache;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

@@ -9,7 +9,7 @@ Use [private reporting](SECURITY.md) for security-sensitive defects.
 1. Build Debug and Release and run CTest.
 2. Add regression tests for changed behavior. Storage changes need restart and failure cases.
 3. Run ASan/UBSan for storage changes and libFuzzer for parser changes.
-4. Format project C++ with clang-format 21 and run the configured clang-tidy checks.
+4. Format project C and C++ with clang-format 21 and run the configured clang-tidy checks.
 5. Update the API, format or durability documentation when behavior changes.
 6. Run the installed-package consumer for build-system changes.
 

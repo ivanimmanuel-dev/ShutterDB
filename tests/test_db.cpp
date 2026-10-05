@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "internal.hpp"
+#include <algorithm>
 #include <chrono>
 #include <doctest/doctest.h>
 #include <fstream>
@@ -171,6 +172,54 @@ TEST_CASE("CRC32C standard check vector") {
     std::string text = "123456789";
     CHECK(crc32c(std::as_bytes(std::span(text))) == 0xe3069283U);
     CHECK(crc32c({}) == 0U);
+}
+TEST_CASE("buffered scanning handles crossing headers, large records and incomplete tails") {
+    struct Memory final : Reader {
+        std::span<const std::byte> bytes;
+        mutable std::size_t reads = 0, sizes = 0;
+        explicit Memory(std::span<const std::byte> input) : bytes(input) {}
+        std::uint64_t size() const override {
+            ++sizes;
+            return bytes.size();
+        }
+        void read(std::uint64_t offset, std::span<std::byte> into) const override {
+            REQUIRE(offset <= bytes.size());
+            REQUIRE(into.size() <= bytes.size() - offset);
+            ++reads;
+            std::copy_n(bytes.data() + offset, into.size(), into.data());
+        }
+    };
+    Bytes bytes = file_header();
+    const Bytes padding(1024 * 1024 - file_header_size - record_header_size - 3 - 16, std::byte{42});
+    auto first = encode(Kind::put, 1, "pad", padding);
+    bytes.insert(bytes.end(), first.begin(), first.end());
+    const auto crossing = bytes.size();
+    const Bytes large(1024 * 1024 + 37, std::byte{17});
+    auto second = encode(Kind::put, 2, "large", large);
+    bytes.insert(bytes.end(), second.begin(), second.end());
+    for (std::uint64_t i = 3; i < 1003; ++i) {
+        auto record = encode(Kind::put, i, "small", std::as_bytes(std::span("value", 5)));
+        bytes.insert(bytes.end(), record.begin(), record.end());
+    }
+    Memory reader(bytes);
+    auto state = scan(reader, {});
+    REQUIRE(state.report.ok());
+    CHECK(state.index.size() == 3);
+    CHECK(state.index.at("large").offset == crossing);
+    CHECK(reader.reads < 16);
+    CHECK(reader.sizes == 1);
+    bytes[crossing + record_header_size + 5 + 1024 * 1024] ^= std::byte{1};
+    Memory damaged(bytes);
+    auto report = scan(damaged, {}).report;
+    REQUIRE(report.issue);
+    CHECK(report.issue->offset == crossing);
+    bytes[crossing + record_header_size + 5 + 1024 * 1024] ^= std::byte{1};
+    bytes.resize(crossing + second.size() - 1);
+    Memory truncated(bytes);
+    report = scan(truncated, {}).report;
+    CHECK(report.truncated_tail);
+    CHECK_FALSE(report.issue);
+    CHECK(report.valid_bytes == crossing);
 }
 TEST_CASE("CRC32C implementations match an independent bitwise reference at every alignment") {
     auto reference = [](std::span<const std::byte> bytes) {

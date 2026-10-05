@@ -1,9 +1,11 @@
 # Benchmarks
 
-The [asset-cache comparison](asset-cache-results.md) tests ShutterDB and SQLite on the
-same binary keys and values, including a SQLite configuration with exclusive locking
-and memory mapping. It records synchronized writes, grouped writes, reads, reopen,
-compaction, file sizes and process memory.
+The [asset-cache comparison](asset-cache-v02-results.md) tests ShutterDB, RocksDB and
+SQLite on 64 MiB and 1 GiB datasets. It measures grouped writes, reads, repeated updates,
+reopen, compaction, file sizes and process memory. A second run requests filesystem-cache
+eviction before each phase. The report includes build settings, raw data and reproduction
+commands. The [earlier SQLite comparison](asset-cache-results.md) also measures a sync
+on every write.
 
 The standalone benchmark below measures nine ShutterDB workloads and writes one JSON
 result per run.

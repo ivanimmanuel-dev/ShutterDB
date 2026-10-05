@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `shutter::Cache` with a disk budget, access-based eviction and automatic compaction.
+- Buffer sequential log scans and reuse index entries during replay, retaining full checksum validation.
+- Decode PNG/JPEG assets and preserve transparency in cached PNG previews.
+- Compare repeated update/delete workloads against RocksDB and SQLite on larger datasets.
 - Accelerate CRC32C with runtime-detected x86-64 instructions and a portable slicing-by-eight fallback.
 - Fetch and validate each value with one record read and one allocation.
 - Add a content-addressed preview-cache example and a reproducible SQLite asset-cache comparison.

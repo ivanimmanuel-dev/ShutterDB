@@ -44,7 +44,7 @@ inline void exercise(std::span<const std::byte> bytes) {
         try {
             const auto h = detail::decode_header(bytes.first(detail::record_header_size), 0);
             if (h.total_size <= bytes.size())
-                (void)detail::payload(reader, h, 0);
+                (void)detail::payload(bytes, h, 0);
         } catch (const Error &) {
         }
     } else

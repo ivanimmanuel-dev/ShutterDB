@@ -60,3 +60,4 @@ python3 tools/test-consumer.py --source .
 ```
 
 See the [C++ API](api.md) for storage operations and [CLI reference](cli.md) for the executable.
+For automatically managed asset storage, see the [bounded cache API](cache.md).

@@ -67,7 +67,8 @@ struct Scan {
     std::uint64_t index_bytes = 0;
 };
 Scan scan(const Reader &reader, const Options &options);
-Bytes payload(const Reader &reader, const RecordHeader &header, std::uint64_t offset);
+std::span<const std::byte> payload(std::span<const std::byte> record, const RecordHeader &header,
+                                   std::uint64_t offset);
 void require_valid(const VerifyReport &report, bool allow_tail = false);
 void validate_key(std::string_view key);
 enum class Fault {

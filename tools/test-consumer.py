@@ -26,9 +26,15 @@ with tempfile.TemporaryDirectory(prefix="shutter-independent-consumer-") as dire
         'target_link_libraries(consumer PRIVATE ShutterDB::ShutterDB)\n', encoding="utf-8")
     (root / "main.cpp").write_text(r'''
 #include <shutter/db.hpp>
+#include <shutter/cache.hpp>
 #include <string>
 int main(int argc, char**) {
     const std::string binary("a\0b", 3);
+    shutter::Cache cache("assets.shdb", {.max_bytes = 1024});
+    if (argc == 1) {
+        if (!cache.put("asset", binary)) return 5;
+        cache.sync();
+    } else if (cache.get_string("asset") != binary || cache.stats().storage.database_bytes > 1024) return 6;
     if (argc == 1) {
         shutter::DB db("consumer.shdb");
         db.put("text", "hello"); db.put("binary", binary); db.put("empty", "");

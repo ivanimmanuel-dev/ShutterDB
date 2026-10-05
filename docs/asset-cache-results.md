@@ -1,4 +1,7 @@
-# Asset-cache comparison
+# Asset-cache comparison at 87e4eae
+
+These results describe commit `87e4eae`. See the [v0.2 comparison](asset-cache-v02-results.md)
+for larger datasets, repeated updates, RocksDB and the buffered scanner.
 
 ShutterDB's measured advantage is batched ingestion of binary assets. This run stores
 2,048 random 64-byte keys with 4, 16 or 64 KiB values. Both engines synchronize every
@@ -108,7 +111,7 @@ documentation describes the tested settings.
 
 ## Reproduce
 
-Install SQLite development headers and build the optional comparison:
+Check out commit `87e4eae`, install SQLite development headers and build the optional comparison:
 
 ```sh
 cmake -S . -B build-compare -DCMAKE_BUILD_TYPE=Release -DSHUTTER_BUILD_COMPARISON=ON
