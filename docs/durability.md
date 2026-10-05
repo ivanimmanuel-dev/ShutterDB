@@ -1,6 +1,6 @@
 # Durability contract
 
-ShutterDB is a development preview. The implementation uses persistence primitives and has deterministic process-crash tests; this is not proof of power-loss safety on every device. Linux is the reference platform. Keep recoverable source data and backups while evaluating it.
+ShutterDB v0.1.0 is experimental. The implementation uses persistence primitives and has deterministic process-crash tests; this is not proof of power-loss safety on every device. Linux is the reference platform. Keep recoverable source data and backups while evaluating it.
 
 | Mode | A successful `put`/`remove` means | Risk |
 |---|---|---|
@@ -29,4 +29,12 @@ If a write or flush throws, that operation may be absent or present after reopen
 - No multi-key atomicity or transaction rollback. Individual record validation is not a transaction system.
 - No guarantee that corruption is always automatically recoverable. Failing closed is deliberate.
 
-The crash suite terminates processes at deterministic boundaries, without destructors. It does not cut power, reboot the kernel, emulate a reordered block device, or inject every possible low-level disk error. Windows correctness tests and Linux tests under WSL are recorded separately. Hosted native Linux CI, physical power-cut tests and filesystem fault campaigns remain release work; no "crash proof" claim is made.
+The crash suite terminates processes at eleven deterministic boundaries, without destructors.
+Linux syscall tests additionally exercise short I/O, EINTR, ENOSPC, failed writes, reads,
+truncation, file/directory sync and replacement, including initial publication. A failed sync
+can leave a complete visible record: an error does not promise rollback.
+
+Hosted Linux and Windows CI has passed; see [validation](validation.md). These tests do not
+cut power, reboot the kernel, emulate sector tearing or a reordered block device, or inject
+every low-level error. Physical power-cut and broader filesystem/device campaigns remain
+future validation. No "crash proof" claim is made.

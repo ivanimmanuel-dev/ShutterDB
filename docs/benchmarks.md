@@ -11,9 +11,9 @@ build-release/shutter_bench --count 1000 --key-size 16 --value-size 128 --sync -
 
 ## Workloads and timing boundaries
 
-All workloads are single-threaded. The seed is 20261005. Keys are fixed-width padded decimal IDs; values are repeated `v` bytes. No compression is used. A run performs sequential PUT of N new keys, random PUT of another N disjoint keys, shuffled successful GET, shuffled missing GET, overwrite of the first set, DELETE of the second set, close/reopen recovery, then compaction. Timings include key construction, allocations, checksums and engine I/O. The map may contain up to 2N keys.
+All workloads are single-threaded. The seed is 20261005. Keys are fixed-width padded decimal IDs; values are repeated `v` bytes. No compression is used. A run performs sequential PUT of N new keys, random PUT of another N disjoint keys, shuffled successful GET, shuffled missing GET, overwrite of the first set, DELETE of the second set, close/reopen recovery, a full verification scan, then compaction. Timings include key construction, allocations, checksums and engine I/O. The map may contain up to 2N keys.
 
-PUT/GET/overwrite/delete rates are operation counts divided by elapsed seconds. Recovery and compaction each have one operation; their durations are more informative than their rates. Compaction includes full original verification, temporary verification, syncs, backup copying, replacement and cleanup. Initial DB creation is outside timed workloads.
+PUT/GET/overwrite/delete rates are operation counts divided by elapsed seconds. Recovery, verification and compaction each have one operation; their durations are more informative than their rates. Compaction includes full original verification, temporary verification, syncs, backup copying, replacement and cleanup. Initial DB creation is outside timed workloads.
 
 Buffered runs do not sync each write. An explicit `sync()` **outside the write timings** occurs before reopen. Do not compare those rates to synchronous durability. Synchronous runs include the synchronization cost in each write. Reads and reopen are warm-cache: the harness does not evict OS caches. There is no cold-start or tail-latency claim.
 

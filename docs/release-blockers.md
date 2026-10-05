@@ -1,19 +1,23 @@
 # v0.1 release hardening ledger
 
-Scope: validate and harden the existing engine. No roadmap features.
+Scope: validate and harden the existing engine. No roadmap features were added.
 
-| Gate / finding | Baseline | Required evidence |
+| Finding / gate | Resolution | Evidence |
 |---|---|---|
-| Hosted CI | No remote or hosted runs | Exact candidate commit green on Linux and Windows, sanitizers, quality |
-| Unsupported-format recovery | A backup could overwrite an unsupported primary | Fail closed; preserve both files; regression test |
-| Nonregular input | POSIX read-only open could block on a FIFO before type validation | Nonblocking type probe; bounded subprocess regression |
-| Partial tail sequence | Complete sequence field in a short header was not checked against the prefix | Reject non-increasing sequence without mutation |
-| OS failure coverage | Only high-level injected exceptions | Short writes, EINTR, ENOSPC, sync, rename and directory-sync failures |
-| Stress scale | 4,200 randomized operations | 1,000,000 operations, 100,000 keys, independent-process oracle checks, measurements |
-| Fuzz duration | 20,000 executions per target | Timed ASan/UBSan campaign, executions and corpus retained |
-| Compaction extremes | Mainly small strings | Repeated, binary, near-limit, heavily overwritten/tombstoned cases |
-| Consumer integration | Installed sample under source tree | Standalone source outside tree; installed and local FetchContent modes |
-| Benchmark completeness | Verification not separately timed | Add verification timing; keep all runs and parameters |
-| Version/release artifacts | 0.1.0-dev | Evidence-based version, notes, reproducible archives, checksums and release gate |
+| Unsupported-format recovery could replace a newer primary | Fixed: fail closed and preserve both files | Regression test with valid future-version header and backup |
+| POSIX inspection could block opening a FIFO | Fixed: nonblocking open before regular-file validation | Bounded subprocess regression |
+| Partial tail with a complete old sequence could be truncated | Fixed: reject non-increasing sequence | Regression asserts corruption and unchanged bytes |
+| JSON tail report omitted category/offset | Fixed: explicit CORRUPTION and valid-prefix offset | 28 black-box corruption scenarios |
+| OS error handling lacked meaningful coverage | Closed for release scope | 24 real syscall return-path scenarios; ENOSPC, EINTR, short I/O, sync, rename, truncate |
+| Scale and resident-value behavior unmeasured | Closed | 1M operations / 100k keys / 13 processes; 256 MiB value probe |
+| Only short fuzz runs | Closed for bounded release campaign | 8,878,774 ASan/UBSan executions across four timed targets |
+| Compaction extremes | Closed | Hot-key/tombstone/binary/empty/max-key/max-value/repeated/reopen tests |
+| External consumers | Closed | Installed and local FetchContent sources outside repository; local and hosted Linux/Windows |
+| Verification benchmark missing | Closed | Separate timing; nine workloads × nine retained runs |
+| Hosted CI unexecuted | Closed | All 12 jobs passed hardening run 37280253558; exact tag checked again before publishing |
+| API/version/package consistency | Reviewed | VERSION/public string/CMake check; Git-based reproducible source archive; gated release workflow |
 
-This ledger is updated as evidence is collected. No hosted/experimental-release pass is inferred from workflow files alone.
+No known serious release blocker remains within the experimental scope. Full execution
+details and remaining physical-device/long-term limits are in [validation](validation.md).
+The release workflow must still pass on the final tagged commit; it cannot publish on
+the strength of this ledger alone.

@@ -32,7 +32,17 @@ FetchContent_MakeAvailable(ShutterDB)
 target_link_libraries(myapp PRIVATE ShutterDB::ShutterDB)
 ```
 
-Tests, CLI and benchmarks are off by default when included as a subproject. Once an upstream repository is published, a pinned commit can replace `SOURCE_DIR` with `GIT_REPOSITORY` and `GIT_TAG`. No nonexistent remote or package is advertised here. vcpkg, Conan, Homebrew and AUR publication remain future work.
+Tests, CLI and benchmarks are off by default when included as a subproject.
+Both the installed package and local `FetchContent` workflows are tested in
+independent temporary projects with binary values and a real process restart:
+
+```sh
+python3 tools/test-consumer.py --prefix /your/install/prefix
+python3 tools/test-consumer.py --source .
+```
+
+The upstream repository is [ivanimmanuel-dev/ShutterDB](https://github.com/ivanimmanuel-dev/ShutterDB).
+Pin a reviewed commit when fetching from Git. vcpkg, Conan, Homebrew and AUR publication remain future work.
 
 ## API essentials
 
@@ -60,3 +70,11 @@ Include `<array>` for the binary example. Keys are arbitrary byte strings of 1â€
 The default index budget is one million live keys and 256 MiB of accounted memory. Each entry is charged key length plus 128 bytes; this is a conservative accounting policy, not an exact allocator/RSS cap. Set `max_live_keys` and `max_index_bytes` explicitly for larger databases, and provision memory accordingly.
 
 Keep the database and its `.lock`/recovery sidecars together. Do not delete the lock file while any handle is open. Use `--` before CLI keys or values starting with `--`.
+
+`put` copies its input during the call; callers need not retain the input buffers afterward.
+`get`, `get_string`, `stats` and `verify` return owned values, with no borrowed storage or
+iterator lifetime to manage. Errors use `shutter::Error` with a stable category and optional
+checksum diagnostics; allocation failures may propagate as standard exceptions.
+Recovery is an open policy in `Options` and an explicit CLI command; `inspect` and `verify`
+never repair database bytes. `inspect` may create the persistent lock sidecar.
+Pre-1.0 API evolution is possible; rebuild consumers with the matching headers and library.

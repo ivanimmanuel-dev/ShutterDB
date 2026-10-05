@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "seed": 20261005,
   "count": 2000,
   "key_bytes": 32,
@@ -12,50 +12,56 @@
     {
       "workload": "sequential_put",
       "operations": 2000,
-      "seconds": 0.043773022,
-      "operations_per_second": 45690.24273
+      "seconds": 0.037090315,
+      "operations_per_second": 53922.43231
     },
     {
       "workload": "random_put",
       "operations": 2000,
-      "seconds": 0.043644817,
-      "operations_per_second": 45824.45609
+      "seconds": 0.03380804,
+      "operations_per_second": 59157.52584
     },
     {
       "workload": "random_get",
       "operations": 2000,
-      "seconds": 0.036259138,
-      "operations_per_second": 55158.50928
+      "seconds": 0.024641388,
+      "operations_per_second": 81164.25909
     },
     {
       "workload": "missing_get",
       "operations": 2000,
-      "seconds": 0.000223294,
-      "operations_per_second": 8956801.347
+      "seconds": 0.000182096,
+      "operations_per_second": 10983217.64
     },
     {
       "workload": "overwrite",
       "operations": 2000,
-      "seconds": 0.041357337,
-      "operations_per_second": 48359.01306
+      "seconds": 0.038007391,
+      "operations_per_second": 52621.3441
     },
     {
       "workload": "delete",
       "operations": 2000,
-      "seconds": 0.012257887,
-      "operations_per_second": 163160.2576
+      "seconds": 0.011400061,
+      "operations_per_second": 175437.6577
     },
     {
       "workload": "startup_recovery",
       "operations": 1,
-      "seconds": 0.097340108,
-      "operations_per_second": 10.27325756
+      "seconds": 0.100881824,
+      "operations_per_second": 9.912588416
+    },
+    {
+      "workload": "verification",
+      "operations": 1,
+      "seconds": 0.10366099,
+      "operations_per_second": 9.6468305
     },
     {
       "workload": "compaction",
       "operations": 1,
-      "seconds": 0.192940373,
-      "operations_per_second": 5.182948413
+      "seconds": 0.182596075,
+      "operations_per_second": 5.476568979
     }
   ],
   "repeat": 3

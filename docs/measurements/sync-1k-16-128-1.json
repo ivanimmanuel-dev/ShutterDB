@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "seed": 20261005,
   "count": 1000,
   "key_bytes": 16,
@@ -12,50 +12,56 @@
     {
       "workload": "sequential_put",
       "operations": 1000,
-      "seconds": 1.75301759,
-      "operations_per_second": 570.444932
+      "seconds": 1.452289139,
+      "operations_per_second": 688.5681185
     },
     {
       "workload": "random_put",
       "operations": 1000,
-      "seconds": 1.72181691,
-      "operations_per_second": 580.781844
+      "seconds": 1.561005659,
+      "operations_per_second": 640.612668
     },
     {
       "workload": "random_get",
       "operations": 1000,
-      "seconds": 0.005002174,
-      "operations_per_second": 199913.0778
+      "seconds": 0.00354512,
+      "operations_per_second": 282077.8986
     },
     {
       "workload": "missing_get",
       "operations": 1000,
-      "seconds": 0.000171175,
-      "operations_per_second": 5841974.587
+      "seconds": 8.2877e-05,
+      "operations_per_second": 12066073.82
     },
     {
       "workload": "overwrite",
       "operations": 1000,
-      "seconds": 1.850915286,
-      "operations_per_second": 540.2732408
+      "seconds": 1.560959153,
+      "operations_per_second": 640.6317539
     },
     {
       "workload": "delete",
       "operations": 1000,
-      "seconds": 2.101788618,
-      "operations_per_second": 475.785239
+      "seconds": 1.516805853,
+      "operations_per_second": 659.2801564
     },
     {
       "workload": "startup_recovery",
       "operations": 1,
-      "seconds": 0.017383888,
-      "operations_per_second": 57.52453076
+      "seconds": 0.011907154,
+      "operations_per_second": 83.98312477
+    },
+    {
+      "workload": "verification",
+      "operations": 1,
+      "seconds": 0.012093377,
+      "operations_per_second": 82.68988885
     },
     {
       "workload": "compaction",
       "operations": 1,
-      "seconds": 0.035588691,
-      "operations_per_second": 28.09881375
+      "seconds": 0.031213043,
+      "operations_per_second": 32.03788878
     }
   ],
   "repeat": 1

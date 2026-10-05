@@ -1,5 +1,5 @@
 $ shutter version
-ShutterDB 0.1.0-dev
+ShutterDB 0.1.0
 $ shutter init app.shdb
 OK
 $ shutter set username cosmos --db app.shdb

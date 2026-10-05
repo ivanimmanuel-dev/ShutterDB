@@ -1,0 +1,67 @@
+name: Experimental release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag whose exact commit passed CI
+        required: true
+        default: v0.1.0
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x64
+          - os: windows-latest
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Require version match and successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: python tools/check-release.py "$RELEASE_TAG"
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --config Release --parallel 2
+      - run: ctest --test-dir build -C Release --output-on-failure
+      - run: cmake --install build --config Release --prefix stage
+      - run: python tools/test-consumer.py --prefix stage
+      - run: python tools/package-release.py --output dist --install stage --platform ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: dist/*
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Verify artifacts and publish experimental release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python tools/check-release.py "$RELEASE_TAG"
+          (cd dist && sha256sum -c SHA256SUMS-linux-x64.txt && sha256sum -c SHA256SUMS-windows-x64.txt)
+          gh release create "$RELEASE_TAG" dist/* --verify-tag --prerelease --title "ShutterDB $RELEASE_TAG — experimental" --notes-file "docs/releases/$RELEASE_TAG.md"

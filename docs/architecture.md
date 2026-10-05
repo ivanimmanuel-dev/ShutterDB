@@ -33,7 +33,7 @@ An open `DB` has an exclusive process lock. `inspect` takes a shared lock and op
 7. Sync the parent directory, reopen the primary, install its verified index.
 8. Remove the backup and sync the parent directory again.
 
-Failures leave a poisoned handle and recovery evidence. On the next open, a valid primary wins and the backup is removed. If the primary is absent or invalid and the backup validates, the backup is restored. If neither validates, opening fails. Resource-limit or I/O errors while scanning the primary do not trigger fallback. Abandoned `.compact` and `.backup.tmp` files are removed while locked. These suffixes and `.init` are reserved; do not use them for unrelated files.
+Failures leave a poisoned handle and recovery evidence. On the next open, a valid primary wins and the backup is removed. If the primary is absent or corrupt and the backup validates, the backup is restored. If neither validates, opening fails. Unsupported-format, resource-limit or I/O errors while scanning the primary do not trigger fallback: they cannot establish that rollback is safe. Abandoned `.compact` and `.backup.tmp` files are removed while locked. These suffixes and `.init` are reserved; do not use them for unrelated files.
 
 This conservative algorithm needs temporary disk space approximately equal to the old log plus the compacted log. A successful compact can temporarily require total space approaching three times the original. No disk-space preflight can guarantee later writes succeed; errors preserve the original or backup. New files use private POSIX permissions (0600); compaction does not preserve arbitrary custom file metadata.
 

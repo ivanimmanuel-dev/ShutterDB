@@ -1,20 +1,27 @@
-# Roadmap and release gate
+# Release scope and future work
 
-## Current: 0.1.0-dev
+## v0.1.0 — experimental
 
-Persistent PUT/GET/DELETE, restart scanning, checksummed format, bounded parsing, manual compaction with a durable backup, synchronization modes, typed errors, locking, CLI, tests, sanitizer/fuzz targets, benchmarks and CMake packaging are implemented. This does **not** make the v0.1 release complete.
+Persistent PUT/GET/DELETE, restart scanning, checksummed format v1, bounded parsing,
+manual compaction with a durable backup, synchronization modes, typed errors, locking,
+CLI and CMake packaging are the release scope. No new storage architecture was added
+during release hardening. See the [gate ledger](release-blockers.md) and
+[validation evidence](validation.md).
 
-Before publishing v0.1:
+Format v1 is documented byte-for-byte. This release reads and writes v1 only; an unknown
+version fails closed. No migration tool or indefinite on-disk compatibility promise is
+made for future experimental versions. Keep backups before upgrades.
 
-- Complete hosted Linux/Windows CI on the exact tagged commit.
-- Review format v1 and recovery choices independently; explicitly freeze the format or mark migration requirements.
-- Run longer fuzz campaigns and real disk/syscall fault injection, including ENOSPC, sync/rename failures and reordered writes.
-- Exercise Linux crash behavior outside WSL and on more than one local filesystem/device; investigate power-cut behavior.
-- Measure larger datasets, memory use and startup costs; collect external integration feedback.
-- Verify source archives, license notices, docs examples and package-consumer tests from the archive itself.
+## Further validation
 
-## Only after measurements
+Physical power cuts, reordered block I/O, more filesystems/devices, independent durability
+review, longer fuzzing and external integration experience would strengthen confidence.
+These limitations remain visible in the [durability contract](durability.md).
 
-Potential v0.2 work: read concurrency, lock hardening, better memory/startup statistics and measured cache improvements. Potential v0.3 work: segmented logs and incremental startup work. Potential later work: snapshots and atomic batches, then only justified transaction experiments.
+## Ideas, not commitments
 
-No LSM/SSTable rewrite, network mode, replication, GUI, cloud APIs or automatic roadmap implementation is planned for this preview. Each proposal must show a concrete need, a bounded design and a failure-testing strategy.
+Read concurrency, startup improvements, segmented logs, snapshots and atomic batches
+require measured need and a separate design review. Package-manager publication also
+needs validation in each actual packaging ecosystem. None is part of v0.1 or started
+as part of this release. The project has no SQL, networking, replication, LSM/SSTable
+pipeline or background compaction.

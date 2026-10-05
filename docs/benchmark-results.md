@@ -12,14 +12,15 @@ N = 10,000; key = 16 B; value = 128 B; sync = false.
 
 | Workload | Median | Min–max |
 |---|---:|---:|
-| sequential_put | 138,736.69 ops/s | 118,997.98–144,365.82 ops/s |
-| random_put | 130,877.08 ops/s | 124,769.34–141,513.28 ops/s |
-| random_get | 199,727.83 ops/s | 190,537.10–219,538.49 ops/s |
-| missing_get | 7,131,899.49 ops/s | 5,848,479.92–7,909,390.03 ops/s |
-| overwrite | 124,987.64 ops/s | 119,292.19–139,887.48 ops/s |
-| delete | 137,730.52 ops/s | 132,028.08–141,943.09 ops/s |
-| startup_recovery | 190.73 ms | 186.84–202.85 ms |
-| compaction | 316.65 ms | 304.36–426.13 ms |
+| sequential_put | 170,889.18 ops/s | 164,388.23–180,543.62 ops/s |
+| random_put | 169,173.79 ops/s | 154,670.18–179,110.27 ops/s |
+| random_get | 255,681.85 ops/s | 248,165.57–292,644.20 ops/s |
+| missing_get | 8,485,089.15 ops/s | 7,824,995.54–9,543,541.93 ops/s |
+| overwrite | 168,772.53 ops/s | 151,449.42–186,543.10 ops/s |
+| delete | 177,341.33 ops/s | 164,974.62–193,355.40 ops/s |
+| startup_recovery | 142.75 ms | 126.41–143.08 ms |
+| verification | 136.78 ms | 130.12–145.78 ms |
+| compaction | 207.99 ms | 203.86–211.74 ms |
 
 Compaction: 6,080,032 → 1,840,032 bytes, retaining 10,000 live keys.
 
@@ -29,14 +30,15 @@ N = 2,000; key = 32 B; value = 4096 B; sync = false.
 
 | Workload | Median | Min–max |
 |---|---:|---:|
-| sequential_put | 45,690.24 ops/s | 37,935.50–49,690.17 ops/s |
-| random_put | 44,846.05 ops/s | 34,855.82–45,824.46 ops/s |
-| random_get | 58,762.48 ops/s | 55,158.51–69,441.91 ops/s |
-| missing_get | 8,956,801.35 ops/s | 5,056,365.84–9,416,949.57 ops/s |
-| overwrite | 48,278.53 ops/s | 27,561.06–48,359.01 ops/s |
-| delete | 128,031.68 ops/s | 105,393.45–163,160.26 ops/s |
-| startup_recovery | 97.34 ms | 90.06–112.87 ms |
-| compaction | 199.88 ms | 192.94–326.64 ms |
+| sequential_put | 58,503.92 ops/s | 53,922.43–59,901.92 ops/s |
+| random_put | 59,157.53 ops/s | 58,145.07–60,298.99 ops/s |
+| random_get | 81,164.26 ops/s | 80,929.78–82,714.11 ops/s |
+| missing_get | 10,910,598.56 ops/s | 10,558,602.89–10,983,217.64 ops/s |
+| overwrite | 60,657.12 ops/s | 52,621.34–63,431.74 ops/s |
+| delete | 197,320.95 ops/s | 175,437.66–197,634.69 ops/s |
+| startup_recovery | 75.45 ms | 74.36–100.88 ms |
+| verification | 75.68 ms | 75.46–103.66 ms |
+| compaction | 170.49 ms | 153.23–182.60 ms |
 
 Compaction: 25,152,032 → 8,336,032 bytes, retaining 2,000 live keys.
 
@@ -46,17 +48,18 @@ N = 1,000; key = 16 B; value = 128 B; sync = true.
 
 | Workload | Median | Min–max |
 |---|---:|---:|
-| sequential_put | 547.90 ops/s | 467.75–570.44 ops/s |
-| random_put | 554.97 ops/s | 540.39–580.78 ops/s |
-| random_get | 237,015.63 ops/s | 199,913.08–238,051.65 ops/s |
-| missing_get | 9,554,840.00 ops/s | 5,841,974.59–9,999,000.10 ops/s |
-| overwrite | 559.20 ops/s | 540.27–562.80 ops/s |
-| delete | 475.79 ops/s | 379.59–566.16 ops/s |
-| startup_recovery | 17.38 ms | 16.61–24.47 ms |
-| compaction | 46.52 ms | 35.59–91.48 ms |
+| sequential_put | 684.46 ops/s | 666.47–688.57 ops/s |
+| random_put | 640.61 ops/s | 629.68–675.63 ops/s |
+| random_get | 282,077.90 ops/s | 261,937.34–289,234.43 ops/s |
+| missing_get | 11,979,204.10 ops/s | 11,233,556.88–12,066,073.82 ops/s |
+| overwrite | 640.63 ops/s | 445.59–693.04 ops/s |
+| delete | 692.77 ops/s | 659.28–727.48 ops/s |
+| startup_recovery | 12.18 ms | 11.91–12.48 ms |
+| verification | 12.09 ms | 12.03–12.20 ms |
+| compaction | 29.11 ms | 29.07–31.21 ms |
 
 Compaction: 608,032 → 184,032 bytes, retaining 1,000 live keys.
 
 ## Interpretation
 
-This baseline confirms that all eight benchmark paths execute and verify their output. Small datasets, warm page cache and a virtual disk limit generalization. No p95/p99 latency, cold-cache throughput, scaling, memory-RSS or comparative performance claims are made. Run the [methodology](benchmarks.md) on the deployment environment before making performance decisions.
+This baseline confirms that all nine benchmark paths execute and verify their output. Small datasets, warm page cache and a virtual disk limit generalization. No p95/p99 latency, cold-cache throughput, scaling, memory-RSS or comparative performance claims are made. Run the [methodology](benchmarks.md) on the deployment environment before making performance decisions.

@@ -1,7 +1,17 @@
 <p align="center"><img src="docs/assets/banner.svg" alt="ShutterDB — Fast. Durable. Embedded." width="900"></p>
 
-ShutterDB is a lightweight embedded key-value database written in modern C++.
-Durable local persistence without running a database server or integrating a large storage stack.
+# ShutterDB
+
+[![CI](https://github.com/ivanimmanuel-dev/ShutterDB/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanimmanuel-dev/ShutterDB/actions/workflows/ci.yml)
+[![MIT license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+**Fast. Durable. Embedded.**
+
+A lightweight embedded key-value database for modern C++. No server, C++20,
+checksummed storage, crash-aware recovery, and zero third-party runtime dependencies.
+
+**v0.1.0 is experimental.** Linux GCC/Clang and Windows MSVC pass hosted tests;
+macOS passes the functional suite. Keep backups. This is not a production-durability certification.
 
 ```cpp
 #include <shutter/db.hpp>
@@ -17,9 +27,9 @@ int main() {
 }
 ```
 
-**Development preview · 0.1.0-dev · C++20 · MIT · No third-party runtime dependencies**
-
-This is a working storage engine with tests, not a production-ready database. The v0.1 release gate remains open until hosted CI and broader durability testing are complete. See the [validation report](docs/validation.md) for measured evidence and limitations.
+The [validation report](docs/validation.md) records the million-operation workload,
+sanitizers, fuzz campaigns, corruption checks and failure recovery. Start with the
+[release notes](docs/releases/v0.1.0.md) for the scope and known limitations.
 
 ## Small enough to understand
 
@@ -35,7 +45,8 @@ There are no transactions, iterators, SQL, network services, background threads,
 
 ## Build in three commands
 
-From this directory, with CMake 3.21+ and a C++20 compiler:
+Download the [release source](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0)
+or clone this repository. From its root, with CMake 3.21+ and a C++20 compiler:
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -43,7 +54,11 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-The default tests use a vendored, pinned doctest header. Python 3 enables an additional CLI integration test; the engine and parser tests do not require Python. On Visual Studio generators the executable is `build/Release/shutter.exe`; on single-configuration generators it is `build/shutter`.
+The default tests use a vendored, pinned doctest header. Python 3 enables CLI,
+corruption and Linux syscall-fault tests; the engine and parser tests do not require Python.
+On Visual Studio generators the executable is `build/Release/shutter.exe`; on
+single-configuration generators it is `build/shutter`. Install `bin/` on your PATH
+or use that executable path in the CLI examples below.
 
 ## Use from your project
 
