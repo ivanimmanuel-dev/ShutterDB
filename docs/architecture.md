@@ -10,6 +10,11 @@ open       -> stable sidecar lock -> recover replacement -> scan and CRC -> inde
 
 The index is a `std::map` from owned key bytes to offset, sequence and record/value sizes. Values are read on demand. Startup reads each file byte and applies O(log K) index operations per record: O(B + N log K) time for B bytes, N records and K live keys, excluding key-comparison cost. Memory is O(K + total live key bytes + maximum record size).
 
+Reads use the indexed record size to fetch a complete record in one operation, then
+validate its header, payload checksum and key before returning the value. CRC32C uses
+x86-64 SSE4.2 instructions when detected at runtime, with a portable slicing-by-eight
+implementation for other CPUs. Both produce the same format-v1 checksum.
+
 ## Writing and failure
 
 The write path validates arguments and reserves a new map node before appending. It encodes a bounded record, writes the header and payload through OS calls, synchronizes if requested, then updates the index. Partial writes and EINTR are retried. An uncertain append, flush or compaction failure invalidates the handle with `NEEDS_REOPEN`; a failed sync keeps bytes already written for recovery.

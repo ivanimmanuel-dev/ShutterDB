@@ -1,6 +1,12 @@
 # Benchmarks
 
-The benchmark executable measures nine workloads and writes one JSON result per run.
+The [asset-cache comparison](asset-cache-results.md) tests ShutterDB and SQLite on the
+same binary keys and values, including a SQLite configuration with exclusive locking
+and memory mapping. It records synchronized writes, grouped writes, reads, reopen,
+compaction, file sizes and process memory.
+
+The standalone benchmark below measures nine ShutterDB workloads and writes one JSON
+result per run.
 
 ```sh
 cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DSHUTTER_BUILD_BENCHMARKS=ON

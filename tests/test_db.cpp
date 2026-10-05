@@ -172,6 +172,35 @@ TEST_CASE("CRC32C standard check vector") {
     CHECK(crc32c(std::as_bytes(std::span(text))) == 0xe3069283U);
     CHECK(crc32c({}) == 0U);
 }
+TEST_CASE("CRC32C implementations match an independent bitwise reference at every alignment") {
+    auto reference = [](std::span<const std::byte> bytes) {
+        std::uint32_t crc = 0xffffffffU;
+        for (const auto byte : bytes) {
+            crc ^= std::to_integer<unsigned char>(byte);
+            for (int bit = 0; bit < 8; ++bit)
+                crc = (crc >> 1) ^ ((crc & 1) ? 0x82f63b78U : 0U);
+        }
+        return ~crc;
+    };
+    Bytes data(1024 * 1024 + 16);
+    std::mt19937 random(20261005);
+    for (auto &byte : data)
+        byte = std::byte(random() & 255);
+    for (std::size_t offset = 0; offset < 16; ++offset) {
+        for (std::size_t length = 0; length <= 256; ++length) {
+            const auto bytes = std::span(data).subspan(offset, length);
+            const auto expected = reference(bytes);
+            CHECK(crc32c_portable(bytes) == expected);
+            CHECK(crc32c(bytes) == expected);
+        }
+        for (const std::size_t length : {4095U, 4096U, 4097U, 65535U, 65536U, 1048576U}) {
+            const auto bytes = std::span(data).subspan(offset, length);
+            const auto expected = reference(bytes);
+            CHECK(crc32c_portable(bytes) == expected);
+            CHECK(crc32c(bytes) == expected);
+        }
+    }
+}
 TEST_CASE("all single-byte mutations of a complete file are rejected") {
     Temp t;
     seed(t.path);
@@ -436,6 +465,22 @@ TEST_CASE("read detects changed payload and externally truncated database") {
     }
     expect_error([&] { (void)db.get("key"); }, ErrorCode::corruption);
     CHECK_THROWS_AS(db.put("another", "value"), Error);
+}
+TEST_CASE("reads reject valid replacement records that disagree with the open index") {
+    for (const auto replacement : {0, 1, 2, 3}) {
+        Temp t;
+        DB db(t.path);
+        db.put("key", "value");
+        auto record = encode(
+            Kind::put, replacement == 0 ? 2 : 1, replacement == 1 ? "bad" : "key",
+            std::as_bytes(std::span(replacement == 2 ? "longer value" : "value", replacement == 2 ? 12 : 5)));
+        auto bytes = file_header();
+        bytes.insert(bytes.end(), record.begin(), record.end());
+        if (replacement == 3)
+            bytes.resize(bytes.size() - 1);
+        write_all(t.path, bytes);
+        expect_error([&] { (void)db.get("key"); }, ErrorCode::corruption);
+    }
 }
 TEST_CASE("one DB serializes operations from multiple threads") {
     Temp t;

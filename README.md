@@ -4,8 +4,9 @@
 [![Release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.1.0)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Embedded key-value storage for C++20. ShutterDB stores binary keys and values in a
-checksummed, append-only log. Link the library and open a file.
+Embedded key-value storage for C++20 asset caches and local application data.
+ShutterDB stores binary keys and values in a checksummed, append-only log.
+Link the library and open a file.
 
 ```cpp
 #include <shutter/db.hpp>
@@ -77,6 +78,17 @@ shutter compact --db app.shdb
 
 Use `--value-file` to store a binary file and `get --raw` to read it back.
 The [CLI reference](docs/cli.md) covers commands, JSON output and exit codes.
+
+## Asset caches
+
+Use content hashes as keys to store previews, compiled shaders or generated assets.
+The [preview-cache example](docs/asset-cache.md) builds image previews, reuses them
+across restarts and shares entries between identical source files.
+
+In the [SQLite comparison](docs/asset-cache-results.md), ShutterDB ingested batches of
+4–64 KiB assets **1.58–2.81× faster** than the faster SQLite configuration tested on one
+Ryzen 7 / WSL2 system. The report includes SQLite's wins, raw results and a runnable harness.
+The example and engine optimizations are available on `main`; v0.1.0 packages predate them.
 
 ## Documentation
 

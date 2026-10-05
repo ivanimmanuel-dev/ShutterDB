@@ -9,6 +9,7 @@ namespace shutter::detail {
 constexpr std::size_t file_header_size = 32, record_header_size = 40;
 using Bytes = std::vector<std::byte>;
 std::uint32_t crc32c(std::span<const std::byte> data) noexcept;
+std::uint32_t crc32c_portable(std::span<const std::byte> data) noexcept;
 std::uint64_t read_le(std::span<const std::byte> bytes, std::size_t offset, std::size_t count);
 void write_le(std::span<std::byte> bytes, std::size_t offset, std::uint64_t value, std::size_t count);
 Bytes file_header(std::uint64_t sequence = 0);

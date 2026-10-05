@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Accelerate CRC32C with runtime-detected x86-64 instructions and a portable slicing-by-eight fallback.
+- Fetch and validate each value with one record read and one allocation.
+- Add a content-addressed preview-cache example and a reproducible SQLite asset-cache comparison.
 - Reorganize documentation into installation, API, CLI and storage references.
 - Simplify command-line help and release reporting.
 - Tighten source comments, test descriptions and platform-specific package instructions.

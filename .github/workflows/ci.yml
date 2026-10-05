@@ -108,3 +108,16 @@ jobs:
         with:
           name: stress-evidence
           path: stress.json
+  asset-cache:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev libssl-dev
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSHUTTER_BUILD_ASSET_CACHE=ON -DSHUTTER_BUILD_COMPARISON=ON
+      - run: cmake --build build --parallel 2
+      - run: ctest --test-dir build -R asset_cache --output-on-failure
+      - run: python3 tools/compare-asset-cache.py build/shutter_compare --directory "$RUNNER_TEMP" --count 32 --sizes 4096 65536 --repeats 1 --output comparison.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: asset-cache-comparison
+          path: comparison.json

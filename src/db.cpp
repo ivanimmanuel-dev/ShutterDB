@@ -141,14 +141,21 @@ std::optional<Bytes> DB::get(std::string_view key) const {
     if (found == impl_->state.index.end())
         return std::nullopt;
     const auto &entry = found->second;
-    std::array<std::byte, record_header_size> bytes{};
+    // The index supplies the validated record size, so one read can fetch the whole record.
+    Bytes bytes(entry.total_size);
     impl_->file->read(entry.offset, bytes);
-    const auto h = decode_header(bytes, entry.offset);
-    auto data = payload(*impl_->file, h, entry.offset);
+    const auto h = decode_header(std::span(bytes).first(record_header_size), entry.offset);
     if (h.kind != Kind::put || h.sequence != entry.sequence || h.total_size != entry.total_size ||
-        std::string_view(reinterpret_cast<const char *>(data.data()), h.key_size) != key)
+        h.key_size != key.size())
         throw Error(ErrorCode::corruption, "record no longer matches the index", entry.offset);
-    return Bytes(data.begin() + h.key_size, data.end());
+    const auto data = std::span(bytes).subspan(record_header_size);
+    const auto actual = crc32c(data);
+    if (actual != h.payload_crc)
+        throw Error(ErrorCode::corruption, "payload CRC32C mismatch", entry.offset, h.payload_crc, actual);
+    if (std::string_view(reinterpret_cast<const char *>(data.data()), h.key_size) != key)
+        throw Error(ErrorCode::corruption, "record no longer matches the index", entry.offset);
+    bytes.erase(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(record_header_size + h.key_size));
+    return bytes;
 }
 std::optional<std::string> DB::get_string(std::string_view key) const {
     auto data = get(key);
