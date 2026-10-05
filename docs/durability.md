@@ -1,40 +1,69 @@
-# Durability contract
+# Durability
 
-ShutterDB v0.1.0 is experimental. The implementation uses persistence primitives and has deterministic process-crash tests; this is not proof of power-loss safety on every device. Linux is the reference platform. Keep recoverable source data and backups while evaluating it.
+## Write modes
 
-| Mode | A successful `put`/`remove` means | Risk |
+| Mode | Successful write | Synchronization |
 |---|---|---|
-| Default, `sync_writes=true` | All record bytes have reached OS write calls and a file synchronization call returned successfully before the index is changed | Depends on correct filesystem, OS, device and power-loss behavior |
-| Buffered, `sync_writes=false` | All record bytes have reached the kernel; no durability barrier has been requested for this write | OS crash/power loss may discard or tear recent writes |
-| `db.sync()` | An explicit synchronization call has completed for the current log | Earlier buffered writes are only as durable as the platform's sync contract |
+| Default | Record written and synchronized before updating the index | Each write |
+| `sync_writes=false` | Record written to the kernel before updating the index | Explicit `sync()` |
 
-## Buffers and barriers
+`sync()` synchronizes the current log. Buffered writes since the last successful sync
+may be lost or torn during OS or power failure. Closing a handle does not sync it.
+The write mode belongs to the handle and is not stored in the file.
 
-There is no userspace stream buffer in the storage layer. POSIX uses `pwrite`/`pread`, `ftruncate` and `fsync`; new-file publication and compaction synchronize the parent directory after namespace changes. Windows uses `WriteFile`/`ReadFile`, `SetEndOfFile`, `FlushFileBuffers`, and replacement with `MoveFileExW(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)`. Windows has no identical portable directory-fsync contract in this implementation. macOS builds use POSIX `fsync`, not Apple's stronger `F_FULLFSYNC`; do not infer stronger hardware persistence guarantees.
+## Platform operations
 
-There is no timer-based flush and the destructor does not report or promise a durability barrier. Call `sync()` explicitly before relying on buffered data. Durability is a handle option, not a format field; opening a file does not reveal how historical writes were synchronized.
+| Platform | File synchronization | Replacement |
+|---|---|---|
+| Linux | `fsync` | Atomic rename followed by parent-directory `fsync` |
+| macOS | `fsync` | Rename followed by parent-directory `fsync` |
+| Windows | `FlushFileBuffers` | `MoveFileExW` with replacement and write-through flags |
 
-## Crashes and uncertain writes
+macOS builds do not request `F_FULLFSYNC`. Windows has no equivalent directory-fsync
+operation in this implementation. Persistence depends on the filesystem and device
+honoring these operations.
 
-A process crash after a successful synchronous operation should retain that operation if the platform honors synchronization. An interrupted append can leave a partial final record. Opening normally validates the entire prefix, truncates only a recognized incomplete tail and syncs the truncation. A full-sized final record with a bad checksum is rejected, not discarded. Applications may disable tail recovery and inspect before deciding to repair.
+## Recovery
 
-If a write or flush throws, that operation may be absent or present after reopening. If an exception occurs after the OS sync, it may already be durable. The handle is latched into `NEEDS_REOPEN` and cannot be reused. A failed `compact` may leave the original physical file or the new compacted file; the logical key/value contents are the same. The durable backup supports recovery if replacement is incomplete. See [architecture](architecture.md).
+Opening a database validates the file header and every record. An incomplete final record
+is truncated and the truncation synchronized. Set `recover_truncated_tail=false` to reject
+the file instead. A complete record with a bad checksum is corruption, including at EOF.
 
-## Assumptions and exclusions
+An incomplete header cannot be fully checksummed. Lost suffix bytes and an interrupted
+append can look identical; deletion at a record boundary is undetectable without external
+history. The exact checks are specified in [format v1](file-format.md#recovery-rules).
 
-- Local filesystems with working file locks, synchronization and atomic rename semantics on POSIX.
-- No rogue writer, directory rename, sidecar removal, hardlink manipulation or file editing while open.
-- Hardware that honors flush requests, and no damage to previously synchronized sectors from a later torn write (the usual powersafe-overwrite assumption).
-- No protection against disk destruction, controller firmware bugs, undetected CRC collisions, malicious edits or whole-record suffix deletion.
-- No multi-key atomicity or transaction rollback. Individual record validation is not a transaction system.
-- No guarantee that corruption is always automatically recoverable. Failing closed is deliberate.
+Compaction verifies and syncs a replacement and a backup before replacing the original.
+On reopen, a valid primary takes precedence. If it is absent or corrupt, a valid backup
+is restored. An unsupported version or an I/O/resource error prevents fallback.
+See the [compaction protocol](architecture.md#compaction-protocol).
 
-The crash suite terminates processes at eleven deterministic boundaries, without destructors.
-Linux syscall tests additionally exercise short I/O, EINTR, ENOSPC, failed writes, reads,
-truncation, file/directory sync and replacement, including initial publication. A failed sync
-can leave a complete visible record: an error does not promise rollback.
+## Failed operations
 
-Hosted Linux and Windows CI has passed; see [validation](validation.md). These tests do not
-cut power, reboot the kernel, emulate sector tearing or a reordered block device, or inject
-every low-level error. Physical power-cut and broader filesystem/device campaigns remain
-future validation. No "crash proof" claim is made.
+A failed write or sync may leave its record present after reopening. ShutterDB marks an
+uncertain handle `NEEDS_REOPEN`; close it, reopen and read the affected key before retrying.
+A failed compaction can leave either physical log, with the same logical contents.
+Operations are per key; there is no multi-key transaction or rollback.
+
+## Filesystem requirements
+
+Use a local filesystem with working locks, synchronization and rename semantics. Keep the
+database and its sidecars in a trusted directory. Leave the lock file in place while any
+handle is open, and coordinate external file operations with database ownership.
+Network filesystems, cloud-synchronized directories and mixed Windows/WSL access to the
+same open database are unsupported.
+
+The write protocol assumes a later torn write does not damage previously synchronized
+sectors. Physical power cuts, sector tearing and reordered block writes have not been
+tested. Executed process-exit, syscall-failure and corruption tests are recorded in
+[release results](validation.md).
+
+## Backups and deletion
+
+Close all handles before copying the database. After an interrupted compaction, reopen
+and close it first to resolve sidecars, then copy the primary file. Online backup is not
+supported.
+
+Deleting a key appends a tombstone. Compaction removes old values from the current log;
+filesystem snapshots and device history may retain them. CRC32C detects accidental
+corruption; it provides neither encryption nor authentication.

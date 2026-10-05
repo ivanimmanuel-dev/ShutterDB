@@ -50,14 +50,26 @@ void stats_text(const shutter::Stats &s) {
               << s.last_sequence << "\nFormat              v1\n";
 }
 void usage() {
-    std::cout << "ShutterDB - Fast. Durable. Embedded.\n\n"
-                 "  shutter init FILE\n  shutter set KEY VALUE --db FILE [--buffered]\n"
-                 "  shutter set KEY --value-file FILE --db DB\n  shutter get KEY --db FILE [--raw|--json]\n"
-                 "  shutter delete KEY --db FILE\n  shutter stats --db FILE [--json]\n"
-                 "  shutter verify --db FILE [--json]\n  shutter compact --db FILE\n"
-                 "  shutter recover --db FILE\n  shutter version\n\n"
-                 "Writes sync by default. verify never repairs. recover discards only an incomplete tail.\n"
-                 "Exit: 0 success, 1 missing key, 2 usage, 3 I/O, 4 corruption, 5 locked.\n";
+    std::cout << "ShutterDB " << shutter::version << "\n\n"
+              << "Usage:\n"
+                 "  shutter init FILE\n"
+                 "  shutter set KEY VALUE [--db FILE]\n"
+                 "  shutter set KEY --value-file INPUT [--db FILE]\n"
+                 "  shutter get KEY [--db FILE]\n"
+                 "  shutter delete KEY [--db FILE]\n"
+                 "  shutter stats [--db FILE]\n"
+                 "  shutter verify [--db FILE]\n"
+                 "  shutter compact [--db FILE]\n"
+                 "  shutter recover [--db FILE]\n"
+                 "  shutter version\n\n"
+                 "Options:\n"
+                 "  --db FILE     Database path (default: app.shdb)\n"
+                 "  --buffered    Skip per-write synchronization for set or delete\n"
+                 "  --raw         Write value bytes without a newline (get)\n"
+                 "  --json        Print JSON results\n"
+                 "  --            Treat remaining arguments as literal keys or values\n\n"
+                 "verify scans the file. recover truncates an incomplete final record.\n"
+                 "Exit codes: 0 success, 1 missing key, 2 usage, 3 I/O, 4 corruption, 5 locked.\n";
 }
 } // namespace
 int main(int argc, char **argv) {

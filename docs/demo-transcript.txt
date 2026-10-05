@@ -10,7 +10,7 @@ $ shutter set temporary discard-me --db app.shdb
 OK
 $ shutter get username --db app.shdb
 cosmos-v2
-Each command above is a fresh process: the value survived reopening.
+Value read by a new process.
 
 $ shutter delete temporary --db app.shdb
 OK
@@ -80,4 +80,4 @@ Last sequence       4
 Format              v1
 
 Database OK - all checksums valid
-Tour passed. Original data survived restart and compaction; only a disposable copy was corrupted.
+Demo passed: persistence, deletion, corruption detection and compaction.

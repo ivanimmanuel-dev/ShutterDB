@@ -76,7 +76,7 @@ if args.install:
                   "Windows: x64 MSVC Release, requires the Microsoft Visual C++ runtime.\n"
                   "Linux: x64 Ubuntu 24.04 hosted build, requires compatible glibc/libstdc++.\n"
                   "The static C++ library requires a compatible compiler, ABI and runtime.\n"
-                  "Consult the source archive's durability contract before storing important data.\n")
+                  "Documentation: https://github.com/ivanimmanuel-dev/ShutterDB#documentation\n")
         add(archive, f"shutterdb-{version}-{args.platform}/README.txt", notice.encode())
     artifacts.append(binary)
     manifest["binary_platform"] = args.platform

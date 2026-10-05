@@ -1,5 +1,5 @@
 name: Feature request
-description: A concrete use case that strengthens simple, trustworthy persistence
+description: Propose a feature or improvement
 body:
   - type: textarea
     id: need
@@ -16,4 +16,4 @@ body:
   - type: textarea
     id: failures
     attributes:
-      label: Complexity, failure modes and how to test them
+      label: Tradeoffs and testing

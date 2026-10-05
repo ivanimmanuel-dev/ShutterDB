@@ -1,11 +1,13 @@
-# Dependencies and provenance
+# Third-party notices
 
-The library and CLI require only C++20 and OS APIs. CMake's Threads target represents the platform thread support, not an added database runtime.
+The library and CLI depend on the C++ standard library and OS APIs.
 
-| Component | Version | Use | License |
+| Dependency | Version | Use | License |
 |---|---|---|---|
-| doctest | 2.4.12 | Vendored test assertions and runner only | MIT, `third_party/doctest/LICENSE.txt` |
-| Python | 3.x, optional | CLI integration tests and developer scripts | Supplied by the developer, not redistributed |
-| Clang libFuzzer, ASan, UBSan | Toolchain supplied | Optional parser campaigns and development diagnostics | Not linked into ordinary release builds |
+| [doctest](https://github.com/doctest/doctest/tree/v2.4.12) | 2.4.12 | Tests only | [MIT](third_party/doctest/LICENSE.txt) |
 
-doctest was obtained unchanged from the [upstream v2.4.12 header](https://github.com/doctest/doctest/blob/v2.4.12/doctest/doctest.h). SHA-256: `94029a7d32da24a56249658147dbd2b33ff0b9ed665295cbbaf19aafff5b0ced`. Source engines consulted in the competitive audit were not vendored or copied.
+The vendored [doctest header](third_party/doctest/doctest.h) is unmodified.
+SHA-256: `94029a7d32da24a56249658147dbd2b33ff0b9ed665295cbbaf19aafff5b0ced`.
+
+Python runs optional integration tests and release tools. Clang libFuzzer, ASan and UBSan
+are optional development tools. They are not bundled with ordinary library or CLI builds.

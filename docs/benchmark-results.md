@@ -1,10 +1,21 @@
-# Local benchmark results
+# v0.1.0 benchmark results
 
-Measured on 2026-10-05. Three full runs per configuration; all nine raw JSON files and [environment metadata](measurements/environment.json) are retained. This is a small warm-cache development baseline, not an engine comparison.
+Measured 2026-10-05. Three runs per configuration; tables show medians and ranges.
+The nine raw JSON files and [environment metadata](measurements/environment.json) are retained.
 
-Machine: AMD Ryzen 7 5825U, 16 exposed logical processors, 6.69 GiB WSL RAM; Ubuntu 26.04.1 / WSL2; GCC 15.2.0, Release `-O3 -DNDEBUG`. Data: ext4 on `/dev/sdd`, a WSL virtual disk, under `/var/tmp`. The physical storage device was not identified. No sanitizers were enabled. OS caches were not evicted.
+| Environment | Configuration |
+|---|---|
+| CPU | AMD Ryzen 7 5825U, 16 logical processors |
+| RAM | 6.69 GiB exposed to WSL |
+| OS | Ubuntu 26.04.1 under WSL2 |
+| Compiler | GCC 15.2.0, Release, `-O3 -DNDEBUG` |
+| Storage | ext4 on WSL virtual disk `/dev/sdd`, data under `/var/tmp`; physical device unidentified |
+| Cache | Warm OS cache, no eviction |
+| Writes | Sync mode flushes each write; buffered timings exclude the final explicit sync |
 
-**Virtualized synchronization timings must not be presented as native-device durability measurements.** Physical power-loss behavior was not tested. Buffered writes omit per-write flushes; their timings exclude the final explicit sync. Compaction includes the durable backup protocol.
+Compaction includes verification, synchronization and backup copying.
+See [methodology](benchmarks.md) for workload definitions and reproduction commands.
+These timings describe this virtualized environment.
 
 ## buffered-10k-16-128
 
@@ -59,7 +70,3 @@ N = 1,000; key = 16 B; value = 128 B; sync = true.
 | compaction | 29.11 ms | 29.07–31.21 ms |
 
 Compaction: 608,032 → 184,032 bytes, retaining 1,000 live keys.
-
-## Interpretation
-
-This baseline confirms that all nine benchmark paths execute and verify their output. Small datasets, warm page cache and a virtual disk limit generalization. No p95/p99 latency, cold-cache throughput, scaling, memory-RSS or comparative performance claims are made. Run the [methodology](benchmarks.md) on the deployment environment before making performance decisions.

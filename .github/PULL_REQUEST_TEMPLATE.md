@@ -1,7 +1,7 @@
-Describe the concrete trigger and resulting behavior.
+## Change
 
-Validation performed (include commands, platforms and meaningful results):
+Describe the problem and resulting behavior.
 
-Failure/recovery implications:
+## Testing
 
-Documentation or format changes:
+List commands, platforms and results.

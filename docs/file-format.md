@@ -38,17 +38,17 @@ Keys must have 1–65,536 bytes. Values may have 0–16,777,216 bytes. A record 
 
 ## Integrity and bounds
 
-CRC32C uses the Castagnoli polynomial, reflected form `0x82f63b78`, initial value `0xffffffff`, final XOR `0xffffffff`. The ASCII check vector `123456789` produces `0xe3069283`. CRC is accidental-corruption detection, not authentication. Header and payload CRCs jointly protect every meaningful record byte.
+CRC32C uses the Castagnoli polynomial, reflected form `0x82f63b78`, initial value `0xffffffff`, final XOR `0xffffffff`. The ASCII check vector `123456789` produces `0xe3069283`. Header and payload CRCs cover every record byte.
 
 The scanner validates the header CRC **before trusting lengths**. It widens arithmetic to uint64, checks limits, then checks available file bytes by subtraction before allocating a payload. No complete database image is loaded into RAM. Read and write offsets are restricted to signed 64-bit file positions. There is no configurable on-disk record-size expansion in v1.
 
 ## Recovery rules
 
 - A complete, validated record is applied using latest-write-wins semantics.
-- A partial record header at EOF is a recoverable candidate only if all available fixed fields and complete size fields are plausible.
+- A partial record header at EOF is recoverable only if its available fixed fields, complete size fields and complete sequence are valid.
 - A complete valid record header whose bounded payload extends beyond EOF is a truncated tail.
 - A complete header CRC or payload CRC mismatch is corruption, including the last record.
 - A truncated file header, unknown format or unexpected trailing bytes is an error.
-- Scanning stops at the first error. Counts on an error report describe the scanned prefix; they are not a clean bill of health for the remainder.
+- Scanning stops at the first error. Counts on an error report describe the scanned prefix.
 
-An incomplete header cannot be fully checksummed. Accidental removal of file bytes is indistinguishable from an interrupted append. Applications that need inspection before repair should set `recover_truncated_tail=false`. Corruption that coincidentally forms a plausible incomplete prefix can be classified as a tail; CRCs are not a proof against arbitrary adversarial rewriting. A whole-record suffix removed at an exact boundary cannot be detected without external history.
+An incomplete header cannot be fully checksummed, so damage matching a valid partial prefix can be classified as a tail. Suffix removal can resemble an interrupted append; loss at a record boundary is undetectable without external history. Set `recover_truncated_tail=false` to inspect incomplete files before repair.

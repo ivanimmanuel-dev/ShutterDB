@@ -1,4 +1,4 @@
-"""Compile and execute the README's actual first C++ example against an installation."""
+"""Compile and run the first README C++ example against an installed package."""
 from pathlib import Path
 import re
 import subprocess

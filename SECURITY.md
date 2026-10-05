@@ -1,11 +1,16 @@
-# Security and integrity reports
+# Security
 
-ShutterDB 0.1.0 is an experimental local storage library. There is no established supported release line or security response SLA yet.
+Report vulnerabilities through [GitHub private reporting](https://github.com/ivanimmanuel-dev/ShutterDB/security/advisories/new).
+Include the version or commit, compiler, OS, filesystem, reproduction steps and relevant
+diagnostics. Use a minimal synthetic database rather than private application data.
 
-Report suspected memory-safety, bounded-parser, locking or silent-data-loss defects privately through the repository host's private security-reporting feature **when the maintainer has enabled it**. If it is unavailable, ask the maintainer for a private contact without posting exploit details or private database contents. Use the contact options listed on the repository; no public disclosure is required to obtain a private channel.
+Memory-safety defects, unbounded parsing, broken process locking and silent data loss
+are security-relevant. Reports should identify the input or operation that triggers the failure.
 
-Include the revision, compiler/OS/filesystem, operation sequence, sanitizer output, diagnostic offset and a minimal synthetic reproducer. Preserve your original file; use a redacted copy for investigation. Never upload a database containing secrets to a public issue.
+ShutterDB is an embedded library for local files in a trusted directory. The application
+controls filesystem access. CRC32C detects accidental corruption and does not authenticate
+data; ShutterDB does not provide encryption or access control. The storage assumptions
+are documented in [durability](docs/durability.md).
 
-The file format is designed to reject malformed lengths before allocation and detect accidental corruption. CRC32C is not cryptographic authentication. ShutterDB has no access-control layer or encryption, and assumes a trusted local parent directory. Applications remain responsible for OS permissions, backups and protecting secrets.
-
-Dependencies must be pinned and licensed. CI must not execute untrusted pull-request code with publishing credentials. Any future format-recovery tool should fail closed by default and keep a copy before modifying data.
+Dependencies are pinned and licensed. CI uses read-only permissions for pull requests;
+publishing credentials are limited to the release workflow.

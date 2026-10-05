@@ -1,4 +1,4 @@
-"""Fail closed unless the selected tag is version-consistent and its exact commit passed CI."""
+"""Require a version-matched tag and successful CI for its commit."""
 import json
 from pathlib import Path
 import subprocess

@@ -1,6 +1,6 @@
-# Reproducible benchmarks
+# Benchmarks
 
-ShutterDB uses a dependency-free `steady_clock` harness. It times coarse workloads, checks results, prints one JSON object per invocation and deletes only its uniquely created temporary directory. It is a sensible starting point for trend measurements, not a statistically rigorous database ranking.
+The benchmark executable measures nine workloads and writes one JSON result per run.
 
 ```sh
 cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DSHUTTER_BUILD_BENCHMARKS=ON
@@ -9,18 +9,36 @@ build-release/shutter_bench --count 10000 --key-size 16 --value-size 128 --direc
 build-release/shutter_bench --count 1000 --key-size 16 --value-size 128 --sync --directory /var/tmp
 ```
 
-## Workloads and timing boundaries
+With Visual Studio, use `build-release/Release/shutter_bench.exe` and a local data directory.
 
-All workloads are single-threaded. The seed is 20261005. Keys are fixed-width padded decimal IDs; values are repeated `v` bytes. No compression is used. A run performs sequential PUT of N new keys, random PUT of another N disjoint keys, shuffled successful GET, shuffled missing GET, overwrite of the first set, DELETE of the second set, close/reopen recovery, a full verification scan, then compaction. Timings include key construction, allocations, checksums and engine I/O. The map may contain up to 2N keys.
+## Workloads
 
-PUT/GET/overwrite/delete rates are operation counts divided by elapsed seconds. Recovery, verification and compaction each have one operation; their durations are more informative than their rates. Compaction includes full original verification, temporary verification, syncs, backup copying, replacement and cleanup. Initial DB creation is outside timed workloads.
+Each run uses one thread and seed 20261005. Keys are fixed-width decimal IDs; values are
+repeated `v` bytes. The index holds up to 2N keys.
 
-Buffered runs do not sync each write. An explicit `sync()` **outside the write timings** occurs before reopen. Do not compare those rates to synchronous durability. Synchronous runs include the synchronization cost in each write. Reads and reopen are warm-cache: the harness does not evict OS caches. There is no cold-start or tail-latency claim.
+1. Sequential PUT of N keys.
+2. Random PUT of N additional keys.
+3. Shuffled GET hits.
+4. Shuffled GET misses.
+5. Overwrite the first key set.
+6. Delete the second key set.
+7. Close and reopen to rebuild the index.
+8. Verify the full log.
+9. Compact the log.
 
-Run at least three replicates per configuration. Retain all raw runs; report medians and ranges. Record CPU, RAM, storage/filesystem, virtualization, OS/kernel, compiler, flags, key/value sizes, count and sync mode. Avoid parallel builds or test jobs during measurement. A virtual disk's reported device model is not evidence of physical storage hardware or durable flush completion.
+Timings include key construction, allocation, checksums and I/O. Initial database creation
+is excluded. Reopen, verification and compaction each report one operation; compare their
+durations. Compaction includes verification, syncs, backup copying, replacement and cleanup.
 
-## Measured results
+## Measurement conditions
 
-See [the local benchmark report](benchmark-results.md) and the complete JSON runs in `docs/measurements/`. These are measurements on the development machine, not universal product claims. They include multiple sizes and both durability modes. No LevelDB/RocksDB/LMDB comparisons are made.
+`--sync` includes a synchronization call in each write. Buffered runs sync once outside
+the write timings, before reopen. Reads and reopen use warm OS caches.
 
-Before comparing other engines, match persistence guarantees, checksumming, dataset, cache state, compaction accounting, number of threads and transaction boundaries. Do not quietly batch one engine and sync every operation in another.
+Run at least three repetitions without concurrent builds or tests. Retain the raw JSON
+and report medians and ranges. Record CPU, RAM, OS, filesystem, storage, compiler, flags,
+dataset size, key/value sizes and write mode.
+
+The [v0.1.0 results](benchmark-results.md) contain nine runs across three configurations.
+For cross-engine comparisons, match durability, checksumming, cache state, dataset,
+thread count and compaction accounting.

@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory(prefix="shutter-tour-") as directory:
     run("set", "username", "cosmos-v2", "--db", database)
     run("set", "temporary", "discard-me", "--db", database)
     assert run("get", "username", "--db", database).strip() == "cosmos-v2"
-    print("Each command above is a fresh process: the value survived reopening.\n", flush=True)
+    print("Value read by a new process.\n", flush=True)
     run("delete", "temporary", "--db", database)
     run("get", "temporary", "--db", database, code=1)
     run("stats", "--db", database)
@@ -50,4 +50,4 @@ with tempfile.TemporaryDirectory(prefix="shutter-tour-") as directory:
     run("get", "temporary", "--db", database, code=1)
     run("stats", "--db", database)
     run("verify", "--db", database)
-    print("Tour passed. Original data survived restart and compaction; only a disposable copy was corrupted.")
+    print("Demo passed: persistence, deletion, corruption detection and compaction.")

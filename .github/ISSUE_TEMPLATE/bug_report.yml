@@ -1,9 +1,9 @@
 name: Bug report
-description: A reproducible correctness, integration or CLI problem
+description: Report a bug
 body:
   - type: markdown
     attributes:
-      value: "For memory-safety or sensitive data-loss reports, read SECURITY.md. Never attach a private database."
+      value: "For security-sensitive bugs, use [private reporting](https://github.com/ivanimmanuel-dev/ShutterDB/security/advisories/new). Use synthetic data in reproductions."
   - type: textarea
     id: environment
     attributes:

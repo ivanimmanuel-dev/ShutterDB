@@ -1,6 +1,8 @@
-# Error handling and inspection
+# Errors and inspection
 
-The error model is exceptions for failures and optional values for absent keys. `shutter::Error` derives from `std::runtime_error`. It carries `code()`, `offset()` and optional expected/actual CRC32C values. Standard allocation failures may still throw `std::bad_alloc`. Filesystem path conversion can throw a standard filesystem exception before a file is opened.
+Missing keys return an empty optional. Failures throw `shutter::Error`, derived from
+`std::runtime_error`, with a category, byte offset and optional CRC32C values.
+Allocation and filesystem path conversion can also throw standard exceptions.
 
 ```cpp
 try {
@@ -12,26 +14,38 @@ try {
 }
 ```
 
-| Code | Action |
+| Category | Meaning and action |
 |---|---|
-| `INVALID_ARGUMENT` | Check key/value limits, empty paths and CLI syntax. |
-| `NOT_FOUND` | Database file is absent and creation is disabled. A missing key is an empty optional, not an exception. |
-| `IO_ERROR` | Check storage availability; write outcome may be uncertain. Close and reopen. |
-| `PERMISSION_DENIED` | Check file and parent-directory permissions. |
-| `CORRUPTION` | Preserve a copy and inspect it. Do not treat it as an absent key. |
-| `UNSUPPORTED_FORMAT` | Use a compatible reader; do not modify the file with this version. |
-| `LOCK_CONFLICT` | Another handle/process owns the database. Close it; never delete its lock sidecar. |
-| `RESOURCE_LIMIT` | Key index budget, file-offset limit or sequence space exhausted. Increase only the relevant configurable budget. |
-| `NEEDS_REOPEN` | A failed write/compaction latched the handle. Destroy it and reopen to resolve the on-disk state. |
+| `INVALID_ARGUMENT` | Check key/value limits, paths or CLI syntax. |
+| `NOT_FOUND` | The database is absent and creation is disabled. |
+| `IO_ERROR` | Check storage availability. After a failed write, close and reopen. |
+| `PERMISSION_DENIED` | Check file and directory permissions. |
+| `CORRUPTION` | Preserve a copy and inspect the reported offset. |
+| `UNSUPPORTED_FORMAT` | Open the file with a compatible version. |
+| `LOCK_CONFLICT` | Close the other owning handle or wait for its process to exit. |
+| `RESOURCE_LIMIT` | An index budget, file-offset limit or sequence limit was reached. |
+| `NEEDS_REOPEN` | Destroy the failed handle and reopen to resolve its on-disk state. |
 
-An unsuccessful write can still appear after reopen. Build retry logic around idempotent key assignments and inspect the resulting value. There is no multi-operation rollback or transaction boundary.
+A failed write may be present after reopening. Read the affected key before retrying;
+there is no transaction rollback. See [durability](durability.md#failed-operations).
 
-## Reports without repair
+## Verification reports
 
-`DB::inspect(path)` opens database data read-only under a shared sidecar lock. It returns `VerifyReport` for format/record failures. Opening or locking failures throw. `db.verify()` checks an already-open database with the same scanner. Neither modifies database bytes.
+`DB::inspect(path)` scans database bytes read-only under a shared sidecar lock.
+`db.verify()` scans through an open handle. Both return `VerifyReport` for format and
+record errors; opening and locking failures throw. Inspection may create the lock sidecar.
 
-The report includes file-header validity, format, database size, complete-prefix record counts, PUTs, DELETEs, live keys, live record bytes, reclaimable bytes, valid-prefix length, an incomplete-tail flag and the first diagnostic. CRC failures include expected and computed checksums. Scanning intentionally stops at the first error rather than guessing where later records begin.
+Reports include header validity, file size, valid-prefix length, record counts, live keys,
+reclaimable bytes, an incomplete-tail flag and the first diagnostic. CRC diagnostics
+include expected and computed values. Counts describe the scanned prefix.
 
-`report.ok()` is true only for a completely validated file. A recoverable partial tail is **not** an OK report. Before repair, copy the closed database. Then use `shutter recover --db copy.shdb` for incomplete tails. This command cannot repair arbitrary corruption and will refuse a full-sized invalid record.
+`report.ok()` requires a fully valid file. An incomplete tail returns false even when it
+can be recovered. To repair a copy of a closed database:
 
-Do not run diagnostic readers concurrently with external file editors. The lock protects cooperating ShutterDB users, not programs that ignore locks.
+```sh
+shutter recover --db copy.shdb
+shutter verify --db copy.shdb
+```
+
+Recovery truncates recognized incomplete tails. It rejects complete records with invalid
+checksums. See the [CLI reference](cli.md) for JSON output and exit codes.
