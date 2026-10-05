@@ -3,11 +3,8 @@
 This workload stores 16,384 binary assets, synchronizes every 128 operations and
 performs two rounds of overwrites and deletions before compaction. The two datasets
 contain 64 MiB and 1 GiB of initial values. Results are from one Ryzen 7 / WSL2 system.
-Other virtual-machine workloads were active on this shared host during measurement;
-the ranges matter, and the ratios below describe these runs rather than isolated hardware.
-
-The useful fit is a long-lived cache populated in batches. The measurements below
-separate ingestion, reads, reopening and maintenance so the costs stay visible.
+Other virtual-machine workloads were active on this shared host during measurement.
+Tables report medians and ranges from three repetitions.
 
 ## Batched ingestion
 
@@ -18,9 +15,6 @@ synchronization and close/checkpoint. Every stored value is verified outside the
 |---|---:|---:|---:|---:|
 | 64 MiB / 4 KiB each | 0.712 (0.557–0.755) | 1.346 (1.260–1.503) | 1.419 (1.049–1.425) | 1.217 (0.747–1.509) |
 | 1 GiB / 64 KiB each | 3.871 (3.398–10.616) | 22.872 (20.870–24.875) | 16.728 (15.921–21.352) | 15.692 (14.225–17.612) |
-
-In this run at 1 GiB, ShutterDB ingested the dataset **4.05× faster than RocksDB** and
-**4.32× faster than the faster SQLite configuration tested**.
 
 ## Warm reads and opening
 
@@ -40,12 +34,12 @@ The initial dataset has no obsolete records. Times are median milliseconds.
 | 64 KiB | RocksDB | 922.73 | 4202.90 | 100.3 |
 
 RSS includes resident mapped database pages and excludes the OS filesystem cache.
-It is process memory, not total physical memory consumed by an engine. These datasets
-fit within the 6.69 GiB available to WSL; this is not a larger-than-RAM workload.
+Both datasets fit within the 6.69 GiB available to WSL.
 
 ## Repeated updates and maintenance
 
 Each round overwrites half the keys, removes one quarter and leaves one quarter unchanged.
+Overwrites change a generation byte; the rest of each value stays the same.
 The second round reinserts the deleted quarter before deleting it again. Churn totals
 both rounds’ open, write/sync and close times; it excludes the separate read phases.
 There are 12,288 live values after both rounds. All durations are median seconds.
@@ -82,14 +76,14 @@ Milliseconds: median (minimum–maximum) of three paired runs.
 | 64 KiB | Initial | 328.50 (290.50–379.56) | 268.80 (247.77–285.16) | 1.22× |
 | 64 KiB | After two update rounds | 892.41 (834.77–988.46) | 545.53 (531.69–610.22) | 1.64× |
 
-Opening remains proportional to log size. Buffering reduces small reads and allocations;
-it does not introduce a trusted index snapshot or skip checksum validation.
+Opening remains proportional to log size. Buffering reduces small reads and allocations
+while retaining complete checksum validation.
 
 ## Filesystem-cache eviction requests
 
 A separate 1 GiB run requested `POSIX_FADV_DONTNEED` on each database file before every
-phase. This is an eviction hint, not proof of a cold physical drive; the virtual disk
-and host may retain data. The table includes open plus the first complete lookup pass,
+phase. The hint affects the guest filesystem cache; the virtual disk and host may retain
+data. The table includes open plus the first complete lookup pass,
 because ShutterDB’s log scan itself reads the values into the filesystem cache.
 Seconds: median (minimum–maximum), before updates.
 
@@ -129,7 +123,6 @@ Seconds: median (minimum–maximum), before updates.
   paused. Other QEMU workloads were observed on the host; hardware was not isolated.
 - Three repetitions per configuration. Every phase uses a fresh process and verifies
   every expected value and deletion. Compaction verifies values before and after.
-  This is a local asset-storage comparison, not a network database or Roblox latency test.
 
 ## Reproduce
 

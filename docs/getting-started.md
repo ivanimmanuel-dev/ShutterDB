@@ -6,6 +6,8 @@ Source builds include the test dependency and require no downloads.
 ## Build and install
 
 ```sh
+git clone https://github.com/ivanimmanuel-dev/ShutterDB.git
+cd ShutterDB
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure

@@ -4,12 +4,13 @@
 
 | Mode | Successful write | Synchronization |
 |---|---|---|
-| Default | Record written and synchronized before updating the index | Each write |
+| `sync_writes=true` (DB default) | Record written and synchronized before updating the index | Each write |
 | `sync_writes=false` | Record written to the kernel before updating the index | Explicit `sync()` |
 
 `sync()` synchronizes the current log. Buffered writes since the last successful sync
 may be lost or torn during OS or power failure. Closing a handle does not sync it.
-The write mode belongs to the handle and is not stored in the file.
+The write mode belongs to the handle and is not stored in the file. `Cache` defaults
+to buffered writes; its `storage.sync_writes` option enables per-write synchronization.
 
 ## Platform operations
 

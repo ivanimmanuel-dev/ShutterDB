@@ -80,5 +80,16 @@ Format project-owned C and C++ with clang-format 21. Enable the configured clang
 with `-DSHUTTER_CLANG_TIDY=ON -DSHUTTER_BUILD_TESTS=OFF`.
 
 CI covers GCC/Clang Debug and Release, Windows MSVC, macOS, sanitizers, fuzzing, stress,
-formatting, static analysis and installed/FetchContent consumers. Published measurements
-are in [release results](validation.md).
+formatting, static analysis and installed/FetchContent consumers. The
+[v0.1.0 results](validation.md) record that release's executed checks.
+
+## Publication checks
+
+```sh
+python3 tools/check-project.py
+python3 tests/test_release.py
+```
+
+These check version consistency, release notes, local documentation links, reproducible
+source archives and package checksums. Version checks also run under optimized Python.
+The release workflow requires successful hosted CI on the tagged commit.

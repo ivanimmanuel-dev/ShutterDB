@@ -10,12 +10,17 @@ import subprocess
 import tarfile
 import zipfile
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--ref", default="HEAD")
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--install", type=Path)
 parser.add_argument("--platform", choices=["linux-x64", "windows-x64"])
+parser.add_argument("--runtime", help="Compiler and OS runtime requirements for a binary package")
 args = parser.parse_args()
+if args.install and not (args.platform and args.runtime):
+    parser.error("--install requires --platform and --runtime")
+if not args.install and (args.platform or args.runtime):
+    parser.error("--platform and --runtime require --install")
 repo = Path(__file__).resolve().parents[1]
 
 
@@ -25,17 +30,20 @@ def git(*arguments):
 
 commit = git("rev-parse", args.ref + "^{commit}").decode().strip()
 version = git("show", commit + ":VERSION").decode().strip()
-assert re.fullmatch(r"\d+\.\d+\.\d+(?:-alpha\.\d+)?", version), version
+if not re.fullmatch(r"\d+\.\d+\.\d+(?:-alpha\.\d+)?", version):
+    parser.error(f"Invalid VERSION: {version}")
 header = git("show", commit + ":include/shutter/db.hpp").decode()
-assert f'version = "{version}";' in header, "Public API version disagrees with VERSION"
+if f'version = "{version}";' not in header:
+    parser.error("Public API version disagrees with VERSION")
 cmake = git("show", commit + ":CMakeLists.txt").decode()
-assert f"project(ShutterDB VERSION {version.split('-')[0]} LANGUAGES CXX)" in cmake
+if f"project(ShutterDB VERSION {version.split('-')[0]} LANGUAGES CXX)" not in cmake:
+    parser.error("CMake project version disagrees with VERSION")
 epoch = int(git("show", "-s", "--format=%ct", commit))
 stamp = datetime.datetime.fromtimestamp(max(epoch, 315532800), datetime.timezone.utc).timetuple()[:6]
 args.output.mkdir(parents=True, exist_ok=True)
 prefix = f"ShutterDB-{version}"
 manifest = {"version": version, "commit": commit, "source_date_epoch": epoch,
-            "experimental": True, "source_files": []}
+            "source_files": []}
 
 
 def add(archive, name, data, mode=0o644, compression=zipfile.ZIP_DEFLATED):
@@ -50,7 +58,8 @@ tar_bytes = git("archive", "--format=tar", commit)
 with tarfile.open(fileobj=io.BytesIO(tar_bytes)) as tree, zipfile.ZipFile(source, "w") as archive:
     for member in sorted(tree.getmembers(), key=lambda item: item.name):
         if not member.isfile():
-            assert member.isdir(), "Release source may not contain symlinks or special files"
+            if not member.isdir():
+                parser.error(f"Source archive contains a symlink or special file: {member.name}")
             continue
         data = tree.extractfile(member).read()
         # Stored source entries reproduce byte-for-byte across OS and zlib versions.
@@ -59,10 +68,10 @@ with tarfile.open(fileobj=io.BytesIO(tar_bytes)) as tree, zipfile.ZipFile(source
                                           "sha256": hashlib.sha256(data).hexdigest()})
 artifacts = [source]
 if args.install:
-    assert args.platform, "--install requires --platform"
     executable = args.install / "bin" / ("shutter.exe" if args.platform == "windows-x64" else "shutter")
     reported = subprocess.check_output([str(executable.resolve()), "version"]).decode().strip()
-    assert reported == f"ShutterDB {version}", reported
+    if reported != f"ShutterDB {version}":
+        parser.error(f"Installed CLI version disagrees with VERSION: {reported}")
     binary = args.output / f"{prefix}-{args.platform}.zip"
     with zipfile.ZipFile(binary, "w") as archive:
         for path in sorted(args.install.rglob("*")):
@@ -70,19 +79,16 @@ if args.install:
                 relative = path.relative_to(args.install).as_posix()
                 mode = 0o755 if relative.startswith("bin/") else 0o644
                 add(archive, f"shutterdb-{version}-{args.platform}/{relative}", path.read_bytes(), mode)
-        runtime = {
-            "windows-x64": "x64 MSVC Release; requires the Microsoft Visual C++ runtime.",
-            "linux-x64": "x64 Ubuntu 24.04; requires compatible glibc and libstdc++.",
-        }[args.platform]
-        notice = (f"ShutterDB {version} ({args.platform}, experimental)\nCommit: {commit}\n\n"
+        notice = (f"ShutterDB {version} ({args.platform})\nCommit: {commit}\n\n"
                   f"CLI: bin/{executable.name}\n"
                   "Use this directory as CMAKE_PREFIX_PATH and link ShutterDB::ShutterDB.\n"
-                  f"Runtime: {runtime}\n"
+                  f"Runtime: {args.runtime}\n"
                   "Build applications with a compatible C++ compiler, ABI and runtime.\n"
                   "Documentation: https://github.com/ivanimmanuel-dev/ShutterDB#documentation\n")
         add(archive, f"shutterdb-{version}-{args.platform}/README.txt", notice.encode())
     artifacts.append(binary)
     manifest["binary_platform"] = args.platform
+    manifest["binary_runtime"] = args.runtime
 manifest["artifacts"] = [{"file": path.name, "bytes": path.stat().st_size,
                            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in artifacts]
 suffix = args.platform or "source"

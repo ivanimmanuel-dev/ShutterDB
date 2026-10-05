@@ -11,6 +11,3 @@ ShutterDB is an embedded library for local files in a trusted directory. The app
 controls filesystem access. CRC32C detects accidental corruption and does not authenticate
 data; ShutterDB does not provide encryption or access control. The storage assumptions
 are documented in [durability](docs/durability.md).
-
-Dependencies are pinned and licensed. CI uses read-only permissions for pull requests;
-publishing credentials are limited to the release workflow.

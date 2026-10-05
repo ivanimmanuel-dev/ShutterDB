@@ -10,7 +10,11 @@ get        -> ordered in-memory key index -> file offset -> decode and CRC -> ow
 open       -> stable sidecar lock -> recover replacement -> scan and CRC -> index
 ```
 
-The index is a `std::map` from owned key bytes to offset, sequence and record/value sizes. Values are read on demand. Startup reads each file byte and applies O(log K) index operations per record: O(B + N log K) time for B bytes, N records and K live keys, excluding key-comparison cost. Memory is O(K + total live key bytes + maximum record size).
+The index is a `std::map` from owned key bytes to offset, sequence and record/value
+sizes. Values are read on demand. Startup reads each file byte and applies O(log K)
+index operations per record: O(B + N log K) time for B bytes, N records and K live
+keys, excluding key-comparison cost. Memory is O(K + total live key bytes + maximum
+record size).
 
 Reads use the indexed record size to fetch a complete record in one operation, then
 validate its header, payload checksum and key before returning the value. CRC32C uses
@@ -20,8 +24,7 @@ implementation for other CPUs. Both produce the same format-v1 checksum.
 Opening and verification read the log through a reusable 1 MiB window, growing it
 for an individual record when necessary. Records in the window are checksummed
 without allocating a separate payload buffer. Replay updates existing index entries
-in place when a key is overwritten. All headers and payloads are still validated;
-opening remains proportional to the log's total bytes and records.
+in place when a key is overwritten. Every header and payload is validated.
 
 `Cache` wraps the database with an access-order list and a key-to-list lookup. It
 evicts entries under capacity pressure and invokes ordinary verified compaction.

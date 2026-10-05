@@ -13,8 +13,8 @@ cache.sync();
 ```
 
 Link the same `ShutterDB::ShutterDB` target as the ordinary database. No additional
-library dependencies are needed. The [preview example](asset-cache.md) shows content
-hashes, real image data and reuse across process restarts.
+library dependencies are needed. The [preview example](asset-cache.md) uses content
+hashes to reuse generated images across process restarts.
 
 ## Budget and eviction
 

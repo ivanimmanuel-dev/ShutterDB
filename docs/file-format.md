@@ -40,7 +40,10 @@ Keys must have 1–65,536 bytes. Values may have 0–16,777,216 bytes. A record 
 
 CRC32C uses the Castagnoli polynomial, reflected form `0x82f63b78`, initial value `0xffffffff`, final XOR `0xffffffff`. The ASCII check vector `123456789` produces `0xe3069283`. Header and payload CRCs cover every record byte.
 
-The scanner validates the header CRC **before trusting lengths**. It widens arithmetic to uint64, checks limits, then checks available file bytes by subtraction before allocating a payload. No complete database image is loaded into RAM. Read and write offsets are restricted to signed 64-bit file positions. There is no configurable on-disk record-size expansion in v1.
+The scanner validates the header CRC before using record lengths. It widens arithmetic
+to uint64, checks limits and checks available file bytes by subtraction. Payloads are
+validated in a reusable 1 MiB read window, which grows to fit a bounded record when
+needed. Read and write offsets are restricted to signed 64-bit file positions.
 
 ## Recovery rules
 

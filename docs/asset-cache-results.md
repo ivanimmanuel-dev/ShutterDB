@@ -3,15 +3,12 @@
 These results describe commit `87e4eae`. See the [v0.2 comparison](asset-cache-v02-results.md)
 for larger datasets, repeated updates, RocksDB and the buffered scanner.
 
-ShutterDB's measured advantage is batched ingestion of binary assets. This run stores
-2,048 random 64-byte keys with 4, 16 or 64 KiB values. Both engines synchronize every
+This run stores 2,048 random 64-byte keys with 4, 16 or 64 KiB values. Both engines synchronize every
 128 writes. SQLite is also measured with exclusive locking and a 256 MiB memory map.
 
 Across these three sizes, ShutterDB ingests batches 1.58–2.81× faster than the faster
 SQLite configuration tested. SQLite opens existing databases faster, wins on larger
 warm reads with memory mapping, and is faster when synchronizing every individual write.
-The useful fit is a long-lived cache populated in batches, such as generated previews
-or compiled assets.
 
 ## Batched ingestion
 
@@ -51,8 +48,7 @@ before and after. File sizes include sidecars.
 | 64 KiB | File after compaction, MiB | 96.15 | 96.87 | 96.87 |
 
 RSS measures resident pages in the process, including SQLite's mapped database pages.
-It excludes the OS filesystem cache used by both engines, so it is not a comparison
-of total physical memory consumption.
+It excludes the OS filesystem cache used by both engines.
 
 ## Synchronizing each write
 

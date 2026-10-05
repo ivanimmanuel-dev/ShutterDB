@@ -1,11 +1,14 @@
-name: Experimental release
+name: Release
 on:
   workflow_dispatch:
     inputs:
       tag:
         description: Existing version tag whose exact commit passed CI
         required: true
-        default: v0.1.0
+      prerelease:
+        description: Mark this version as a prerelease
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -17,8 +20,10 @@ jobs:
         include:
           - os: ubuntu-24.04
             platform: linux-x64
+            runtime: Ubuntu 24.04 x64; requires compatible glibc and libstdc++.
           - os: windows-latest
             platform: windows-x64
+            runtime: MSVC x64 Release; requires the Microsoft Visual C++ runtime.
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +41,12 @@ jobs:
       - run: ctest --test-dir build -C Release --output-on-failure
       - run: cmake --install build --config Release --prefix stage
       - run: python tools/test-consumer.py --prefix stage
-      - run: python tools/package-release.py --output dist --install stage --platform ${{ matrix.platform }}
+      - name: Package
+        env:
+          PACKAGE_PLATFORM: ${{ matrix.platform }}
+          PACKAGE_RUNTIME: ${{ matrix.runtime }}
+        shell: bash
+        run: python tools/package-release.py --output dist --install stage --platform "$PACKAGE_PLATFORM" --runtime "$PACKAGE_RUNTIME"
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.platform }}
@@ -57,11 +67,12 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: dist
-      - name: Verify artifacts and publish experimental release
+      - name: Verify artifacts and publish
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
         run: |
           python tools/check-release.py "$RELEASE_TAG"
           (cd dist && sha256sum -c SHA256SUMS-linux-x64.txt && sha256sum -c SHA256SUMS-windows-x64.txt)
-          gh release create "$RELEASE_TAG" dist/* --verify-tag --prerelease --title "ShutterDB $RELEASE_TAG — experimental" --notes-file "docs/releases/$RELEASE_TAG.md"
+          gh release create "$RELEASE_TAG" dist/* --verify-tag --prerelease="$PRERELEASE" --title "ShutterDB $RELEASE_TAG" --notes-file "docs/releases/$RELEASE_TAG.md"
