@@ -1,0 +1,31 @@
+name: Bug report
+description: A reproducible correctness, integration or CLI problem
+body:
+  - type: markdown
+    attributes:
+      value: "For memory-safety or sensitive data-loss reports, read SECURITY.md. Never attach a private database."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Revision, OS, compiler, filesystem, durability options and build flags
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Commands or code using a new temporary database
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Verification and sanitizer output
+      render: text

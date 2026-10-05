@@ -1,0 +1,10 @@
+/build*/
+/install*/
+/benchmark-results/
+*.shdb*
+*.profraw
+crash-*
+leak-*
+timeout-*
+.cache/
+__pycache__/

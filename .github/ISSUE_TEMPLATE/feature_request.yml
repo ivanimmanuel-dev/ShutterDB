@@ -1,0 +1,19 @@
+name: Feature request
+description: A concrete use case that strengthens simple, trustworthy persistence
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What application problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior and alternatives
+    validations:
+      required: true
+  - type: textarea
+    id: failures
+    attributes:
+      label: Complexity, failure modes and how to test them

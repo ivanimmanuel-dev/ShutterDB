@@ -1,0 +1,62 @@
+{
+  "version": "0.1.0-dev",
+  "seed": 20261005,
+  "count": 2000,
+  "key_bytes": 32,
+  "value_bytes": 4096,
+  "sync_writes": false,
+  "database_bytes_before_compaction": 25152032,
+  "database_bytes_after_compaction": 8336032,
+  "consumed": 8196000,
+  "results": [
+    {
+      "workload": "sequential_put",
+      "operations": 2000,
+      "seconds": 0.052721072,
+      "operations_per_second": 37935.4957
+    },
+    {
+      "workload": "random_put",
+      "operations": 2000,
+      "seconds": 0.057379232,
+      "operations_per_second": 34855.81682
+    },
+    {
+      "workload": "random_get",
+      "operations": 2000,
+      "seconds": 0.034035326,
+      "operations_per_second": 58762.4752
+    },
+    {
+      "workload": "missing_get",
+      "operations": 2000,
+      "seconds": 0.000395541,
+      "operations_per_second": 5056365.838
+    },
+    {
+      "workload": "overwrite",
+      "operations": 2000,
+      "seconds": 0.072566157,
+      "operations_per_second": 27561.05715
+    },
+    {
+      "workload": "delete",
+      "operations": 2000,
+      "seconds": 0.018976512,
+      "operations_per_second": 105393.4464
+    },
+    {
+      "workload": "startup_recovery",
+      "operations": 1,
+      "seconds": 0.112874872,
+      "operations_per_second": 8.859367743
+    },
+    {
+      "workload": "compaction",
+      "operations": 1,
+      "seconds": 0.326643477,
+      "operations_per_second": 3.061441818
+    }
+  ],
+  "repeat": 1
+}

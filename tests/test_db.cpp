@@ -1,0 +1,514 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "internal.hpp"
+#include <chrono>
+#include <doctest/doctest.h>
+#include <fstream>
+#include <random>
+#include <thread>
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+
+using namespace shutter;
+using namespace shutter::detail;
+namespace {
+struct Temp {
+    std::filesystem::path dir, path;
+    Temp() {
+        static std::uint64_t counter = 0;
+        const auto seed = std::chrono::steady_clock::now().time_since_epoch().count();
+        for (;;) {
+            dir = std::filesystem::temp_directory_path() /
+                  ("shutter-test-" + std::to_string(seed) + "-" + std::to_string(++counter));
+            if (std::filesystem::create_directory(dir))
+                break;
+        }
+        path = dir / "data.shdb";
+    }
+    ~Temp() {
+        fault_hook = {};
+        std::error_code ec;
+        std::filesystem::remove_all(dir, ec);
+    }
+};
+Options buffered() {
+    Options o;
+    o.sync_writes = false;
+    return o;
+}
+Bytes read_all(const std::filesystem::path &p) {
+    File f(p, File::Mode::read_only);
+    Bytes b(static_cast<std::size_t>(f.size()));
+    f.read(0, b);
+    return b;
+}
+void write_all(const std::filesystem::path &p, std::span<const std::byte> b) {
+    std::ofstream out(p, std::ios::binary | std::ios::trunc);
+    out.write(reinterpret_cast<const char *>(b.data()), static_cast<std::streamsize>(b.size()));
+    REQUIRE(out.good());
+}
+void expect_error(const std::function<void()> &action, ErrorCode code) {
+    bool caught = false;
+    try {
+        action();
+    } catch (const Error &e) {
+        caught = true;
+        CHECK(e.code() == code);
+    }
+    CHECK(caught);
+}
+void seed(const std::filesystem::path &p) {
+    DB db(p, buffered());
+    db.put("a", "one");
+    db.put("b", "two");
+    db.put("a", "three");
+    db.remove("b");
+    db.sync();
+}
+void check_seed(DB &db) {
+    CHECK(db.get_string("a") == "three");
+    CHECK_FALSE(db.contains("b"));
+    CHECK(db.verify().ok());
+}
+void inject(Fault target) {
+    fault_hook = [target](Fault p) {
+        if (p == target)
+            throw Error(ErrorCode::io_error, "injected failure");
+    };
+}
+} // namespace
+
+TEST_CASE("empty database, first write, overwrite, missing and tombstones") {
+    Temp t;
+    {
+        DB db(t.path);
+        CHECK(db.stats().database_bytes == file_header_size);
+        CHECK(db.stats().keys == 0);
+        CHECK_FALSE(db.get("missing"));
+        CHECK_FALSE(db.remove("missing"));
+        db.put("foo", "one");
+        db.put("foo", "two");
+        CHECK(db.get_string("foo") == "two");
+        CHECK(db.remove("foo"));
+        CHECK_FALSE(db.remove("foo"));
+        CHECK(db.stats().records == 3);
+        CHECK(db.stats().tombstones == 1);
+        CHECK(db.verify().ok());
+    }
+    DB reopened(t.path);
+    CHECK_FALSE(reopened.get("foo"));
+    CHECK(reopened.stats().tombstones == 1);
+}
+TEST_CASE("binary keys, binary values, empty values and persistence") {
+    Temp t;
+    const std::string key("a\0b", 3), value("\0\xff\n\r", 4);
+    {
+        DB db(t.path);
+        db.put(key, value);
+        db.put("empty", "");
+    }
+    DB db(t.path);
+    CHECK(db.get_string(key) == value);
+    REQUIRE(db.get("empty"));
+    CHECK(db.get("empty")->empty());
+}
+TEST_CASE("thousands of random operations match a reference map across restarts") {
+    Temp t;
+    std::map<std::string, std::string> oracle;
+    std::mt19937 rng(23017);
+    for (int batch = 0; batch < 6; ++batch) {
+        DB db(t.path, buffered());
+        for (int n = 0; n < 700; ++n) {
+            auto key = "k" + std::to_string(rng() % 251);
+            if (rng() % 4 == 0)
+                CHECK(db.remove(key) == (oracle.erase(key) != 0));
+            else {
+                auto value = std::to_string(rng());
+                db.put(key, value);
+                oracle[key] = value;
+            }
+        }
+        if (batch % 2 == 0)
+            db.compact();
+        CHECK(db.stats().keys == oracle.size());
+        for (const auto &[key, value] : oracle)
+            CHECK(db.get_string(key) == value);
+        CHECK(db.verify().ok());
+    }
+}
+TEST_CASE("limits are validated before append and index budget is bounded") {
+    Temp t;
+    Options opts = buffered();
+    opts.max_live_keys = 1;
+    DB db(t.path, opts);
+    expect_error([&] { db.put("", "value"); }, ErrorCode::invalid_argument);
+    expect_error([&] { db.put(std::string(max_key_size + 1, 'k'), "value"); }, ErrorCode::invalid_argument);
+    expect_error([&] { db.put("key", std::string(max_value_size + 1, 'v')); }, ErrorCode::invalid_argument);
+    db.put(std::string(max_key_size, 'k'), "");
+    expect_error([&] { db.put("second", "v"); }, ErrorCode::resource_limit);
+    CHECK(db.stats().records == 1);
+    db.remove(std::string(max_key_size, 'k'));
+    db.put("second", "v");
+    CHECK(db.verify().ok());
+}
+TEST_CASE("maximum value and bounded index bytes") {
+    Temp t;
+    {
+        DB db(t.path, buffered());
+        const std::string value(max_value_size, 'x');
+        db.put("large", value);
+        CHECK(db.get_string("large") == value);
+    }
+    Options o;
+    o.max_index_bytes = 1;
+    expect_error([&] { DB db(t.path, o); }, ErrorCode::resource_limit);
+    CHECK(DB::inspect(t.path).ok());
+}
+TEST_CASE("CRC32C standard check vector") {
+    std::string text = "123456789";
+    CHECK(crc32c(std::as_bytes(std::span(text))) == 0xe3069283U);
+    CHECK(crc32c({}) == 0U);
+}
+TEST_CASE("all single-byte mutations of a complete file are rejected") {
+    Temp t;
+    seed(t.path);
+    const auto original = read_all(t.path);
+    for (std::size_t i = 0; i < original.size(); ++i) {
+        CAPTURE(i);
+        auto bytes = original;
+        bytes[i] ^= std::byte{0x01};
+        write_all(t.path, bytes);
+        const auto before = read_all(t.path);
+        CHECK_FALSE(DB::inspect(t.path).ok());
+        CHECK(read_all(t.path) == before);
+        CHECK_THROWS_AS(DB(t.path), Error);
+        CHECK(read_all(t.path) == before);
+    }
+}
+TEST_CASE("every truncation boundary is diagnosed and only incomplete records recover") {
+    Temp t;
+    {
+        DB db(t.path, buffered());
+        db.put("first", "safe");
+        db.put("last", "payload");
+    }
+    const auto original = read_all(t.path);
+    const auto first_end = file_header_size + record_header_size + 5 + 4;
+    for (std::size_t cut = 0; cut <= original.size(); ++cut) {
+        CAPTURE(cut);
+        write_all(t.path, std::span(original).first(cut));
+        const auto before = read_all(t.path);
+        const auto report = DB::inspect(t.path);
+        CHECK(read_all(t.path) == before);
+        if (cut < file_header_size) {
+            CHECK_FALSE(report.ok());
+            CHECK_THROWS_AS(DB(t.path), Error);
+            continue;
+        }
+        DB recovered(t.path);
+        CHECK(recovered.verify().ok());
+        CHECK(recovered.contains("first") == (cut >= first_end));
+        CHECK(recovered.contains("last") == (cut == original.size()));
+        recovered.put("after", "recovery");
+        CHECK(recovered.verify().ok());
+    }
+}
+TEST_CASE("strict recovery mode and junk tails never change the file") {
+    Temp t;
+    seed(t.path);
+    auto bytes = read_all(t.path);
+    auto partial = encode(Kind::put, 5, "new", {});
+    bytes.insert(bytes.end(), partial.begin(), partial.begin() + 12);
+    write_all(t.path, bytes);
+    Options o;
+    o.recover_truncated_tail = false;
+    expect_error([&] { DB db(t.path, o); }, ErrorCode::corruption);
+    CHECK(read_all(t.path) == bytes);
+    bytes.back() = std::byte{1};
+    bytes[bytes.size() - 12] = std::byte{'X'};
+    write_all(t.path, bytes);
+    expect_error([&] { DB db(t.path); }, ErrorCode::corruption);
+    CHECK(read_all(t.path) == bytes);
+}
+TEST_CASE("malformed lengths, type, flags, sequence, versions and reserved fields") {
+    Temp t;
+    seed(t.path);
+    const auto original = read_all(t.path);
+    for (const auto &[field, value, count] :
+         std::vector<std::tuple<std::size_t, std::uint64_t, std::size_t>>{{16, 0xffffffff, 4},
+                                                                          {20, 0xffffffff, 4},
+                                                                          {6, 9, 1},
+                                                                          {7, 1, 1},
+                                                                          {8, 0, 8},
+                                                                          {28, 7, 4},
+                                                                          {32, 1, 4},
+                                                                          {4, 99, 2}}) {
+        auto bytes = original;
+        auto header = std::span(bytes).subspan(file_header_size, record_header_size);
+        write_le(header, field, value, count);
+        write_le(header, 36, crc32c(header.first(36)), 4);
+        write_all(t.path, bytes);
+        CHECK_FALSE(DB::inspect(t.path).ok());
+        CHECK_THROWS_AS(DB(t.path), Error);
+    }
+}
+TEST_CASE("a corrupted length in the middle cannot masquerade as a truncated tail") {
+    Temp t;
+    seed(t.path);
+    auto bytes = read_all(t.path);
+    bytes[file_header_size + 20] ^= std::byte{0x40};
+    write_all(t.path, bytes);
+    const auto report = DB::inspect(t.path);
+    REQUIRE(report.issue);
+    CHECK_FALSE(report.truncated_tail);
+    CHECK(report.issue->offset == file_header_size);
+    CHECK(report.issue->expected_crc.has_value());
+    CHECK_THROWS_AS(DB(t.path), Error);
+    CHECK(read_all(t.path) == bytes);
+}
+TEST_CASE("complete final checksum failure is corruption, not recoverable truncation") {
+    Temp t;
+    seed(t.path);
+    auto bytes = read_all(t.path);
+    bytes.back() ^= std::byte{8};
+    write_all(t.path, bytes);
+    CHECK_FALSE(DB::inspect(t.path).truncated_tail);
+    CHECK_THROWS_AS(DB(t.path), Error);
+    CHECK(read_all(t.path) == bytes);
+}
+TEST_CASE("compaction preserves latest values, drops dead records, and preserves sequence watermark") {
+    Temp t;
+    seed(t.path);
+    std::uint64_t sequence = 0;
+    {
+        DB db(t.path);
+        check_seed(db);
+        const auto before = db.stats();
+        db.compact();
+        const auto after = db.stats();
+        CHECK(after.database_bytes < before.database_bytes);
+        CHECK(after.tombstones == 0);
+        CHECK(after.records == 1);
+        CHECK(after.reclaimable_bytes == 0);
+        check_seed(db);
+        CHECK(after.last_sequence == before.last_sequence);
+        db.remove("a");
+        sequence = db.stats().last_sequence;
+        db.compact();
+        CHECK(db.stats().database_bytes == file_header_size);
+    }
+    DB db(t.path);
+    db.put("new", "value");
+    CHECK(db.stats().last_sequence == sequence + 1);
+    CHECK(db.verify().ok());
+}
+TEST_CASE("injected append failures have explicit restart outcomes") {
+    for (const auto point : {Fault::before_append, Fault::during_append, Fault::after_append,
+                             Fault::before_flush, Fault::after_flush}) {
+        Temp t;
+        seed(t.path);
+        {
+            DB db(t.path);
+            inject(point);
+            CHECK_THROWS_AS(db.put("new", "value"), Error);
+            fault_hook = {};
+            if (point != Fault::before_append)
+                expect_error([&] { db.put("bad", "continue"); }, ErrorCode::needs_reopen);
+        }
+        DB db(t.path);
+        check_seed(db);
+        CHECK(db.contains("new") == (point != Fault::before_append && point != Fault::during_append));
+        db.put("next", "ok");
+        CHECK(db.verify().ok());
+    }
+}
+TEST_CASE("injected compaction failures preserve logical contents at every boundary") {
+    for (const auto point :
+         {Fault::compaction_start, Fault::temporary_write, Fault::temporary_validation,
+          Fault::before_replacement, Fault::after_replacement, Fault::after_directory_sync}) {
+        Temp t;
+        seed(t.path);
+        {
+            DB db(t.path);
+            inject(point);
+            CHECK_THROWS_AS(db.compact(), Error);
+            fault_hook = {};
+        }
+        {
+            DB db(t.path);
+            check_seed(db);
+            db.put("new", "safe");
+        }
+        DB again(t.path);
+        check_seed(again);
+        CHECK(again.get_string("new") == "safe");
+    }
+}
+TEST_CASE("missing or damaged primary recovers from a durable compaction backup") {
+    for (bool missing : {false, true}) {
+        Temp t;
+        seed(t.path);
+        {
+            DB db(t.path);
+            inject(Fault::after_replacement);
+            CHECK_THROWS_AS(db.compact(), Error);
+            fault_hook = {};
+        }
+        if (missing)
+            std::filesystem::remove(t.path);
+        else {
+            auto b = read_all(t.path);
+            b[0] ^= std::byte{1};
+            write_all(t.path, b);
+        }
+        DB db(t.path);
+        check_seed(db);
+    }
+}
+TEST_CASE("a valid primary wins over an incomplete backup and stale temporary file") {
+    Temp t;
+    seed(t.path);
+    const Bytes junk(5, std::byte{8});
+    write_all(sibling(t.path, ".backup"), junk);
+    write_all(sibling(t.path, ".compact"), junk);
+    DB db(t.path);
+    check_seed(db);
+    CHECK_FALSE(detail::exists(sibling(t.path, ".backup")));
+}
+TEST_CASE("compaction preserves original after temporary corruption") {
+    Temp t;
+    seed(t.path);
+    const auto original = read_all(t.path);
+    {
+        DB db(t.path);
+        fault_hook = [&](Fault p) {
+            if (p == Fault::temporary_validation) {
+                File file(sibling(t.path, ".compact"), File::Mode::read_write);
+                const std::array b{std::byte{'X'}};
+                file.write(0, b);
+            }
+        };
+        CHECK_THROWS_AS(db.compact(), Error);
+        fault_hook = {};
+    }
+    CHECK(read_all(t.path) == original);
+    DB db(t.path);
+    check_seed(db);
+}
+TEST_CASE("locking rejects another handle, inspector, and normalized aliases") {
+    Temp t;
+    {
+        DB db(t.path);
+        expect_error([&] { DB other(t.path); }, ErrorCode::lock_conflict);
+        expect_error([&] { DB other(t.dir / "." / "data.shdb"); }, ErrorCode::lock_conflict);
+        expect_error([&] { (void)DB::inspect(t.path); }, ErrorCode::lock_conflict);
+        db.compact();
+        expect_error([&] { DB other(t.path); }, ErrorCode::lock_conflict);
+    }
+    CHECK(DB::inspect(t.path).ok());
+}
+TEST_CASE("missing and zero length files do not become empty valid databases") {
+    Temp t;
+    Options o;
+    o.create_if_missing = false;
+    expect_error([&] { DB db(t.path, o); }, ErrorCode::not_found);
+    CHECK_FALSE(detail::exists(t.path));
+    write_all(t.path, {});
+    CHECK_THROWS_AS(DB(t.path), Error);
+    CHECK(read_all(t.path).empty());
+}
+TEST_CASE("read detects changed payload and externally truncated database") {
+    Temp t;
+    DB db(t.path);
+    db.put("key", "value");
+    {
+        File f(t.path, File::Mode::read_write);
+        const std::array b{std::byte{0}};
+        f.write(f.size() - 1, b);
+    }
+    expect_error([&] { (void)db.get("key"); }, ErrorCode::corruption);
+    {
+        File f(t.path, File::Mode::read_write);
+        f.truncate(file_header_size);
+    }
+    expect_error([&] { (void)db.get("key"); }, ErrorCode::corruption);
+    CHECK_THROWS_AS(db.put("another", "value"), Error);
+}
+TEST_CASE("one DB serializes operations from multiple threads") {
+    Temp t;
+    DB db(t.path, buffered());
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 4; ++i)
+        threads.emplace_back([&, i] {
+            for (int n = 0; n < 100; ++n)
+                db.put(std::to_string(i) + ":" + std::to_string(n), "value");
+        });
+    for (auto &thread : threads)
+        thread.join();
+    CHECK(db.stats().keys == 400);
+    CHECK(db.verify().ok());
+}
+#ifndef _WIN32
+TEST_CASE("process termination at append and compaction boundaries recovers on Linux") {
+    for (const auto point :
+         {Fault::before_append, Fault::during_append, Fault::after_append, Fault::before_flush,
+          Fault::after_flush, Fault::compaction_start, Fault::temporary_write, Fault::temporary_validation,
+          Fault::before_replacement, Fault::after_replacement, Fault::after_directory_sync}) {
+        Temp t;
+        seed(t.path);
+        const auto pid = ::fork();
+        REQUIRE(pid >= 0);
+        if (pid == 0) {
+            DB db(t.path);
+            fault_hook = [point](Fault p) {
+                if (p == point)
+                    std::_Exit(77);
+            };
+            if (point <= Fault::after_flush)
+                db.put("new", "value");
+            else
+                db.compact();
+            std::_Exit(78);
+        }
+        int status = 0;
+        REQUIRE(::waitpid(pid, &status, 0) == pid);
+        REQUIRE(WIFEXITED(status));
+        CHECK(WEXITSTATUS(status) == 77);
+        DB db(t.path);
+        check_seed(db);
+        if (point == Fault::after_flush)
+            CHECK(db.get_string("new") == "value");
+        db.put("after-crash", "ok");
+        CHECK(db.verify().ok());
+    }
+}
+TEST_CASE("process lock and symlink aliases reject a second writer") {
+    Temp t;
+    DB db(t.path);
+    auto alias = t.dir / "alias.shdb";
+    std::filesystem::create_symlink(t.path, alias);
+    expect_error([&] { DB other(alias); }, ErrorCode::lock_conflict);
+    auto pid = ::fork();
+    REQUIRE(pid >= 0);
+    if (pid == 0) {
+        try {
+            DB other(t.path);
+        } catch (const Error &e) {
+            std::_Exit(e.code() == ErrorCode::lock_conflict ? 0 : 2);
+        }
+        std::_Exit(1);
+    }
+    int status = 0;
+    REQUIRE(::waitpid(pid, &status, 0) == pid);
+    CHECK(WEXITSTATUS(status) == 0);
+}
+TEST_CASE("hardlinked databases are rejected") {
+    Temp t;
+    seed(t.path);
+    auto alias = t.dir / "hardlink.shdb";
+    std::filesystem::create_hard_link(t.path, alias);
+    expect_error([&] { DB db(t.path); }, ErrorCode::invalid_argument);
+    expect_error([&] { DB db(alias); }, ErrorCode::invalid_argument);
+}
+#endif

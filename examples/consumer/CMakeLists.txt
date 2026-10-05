@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(ShutterConsumer LANGUAGES CXX)
+find_package(ShutterDB CONFIG REQUIRED)
+add_executable(consumer ../basic.cpp)
+target_link_libraries(consumer PRIVATE ShutterDB::ShutterDB)
+enable_testing()
+add_test(NAME installed_package COMMAND consumer)
