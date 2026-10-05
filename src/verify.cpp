@@ -1,6 +1,5 @@
 #include "internal.hpp"
 #include <algorithm>
-#include <cstring>
 
 namespace shutter::detail {
 Bytes payload(const Reader &reader, const RecordHeader &header, std::uint64_t offset) {

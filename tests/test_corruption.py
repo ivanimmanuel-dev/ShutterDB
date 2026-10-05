@@ -1,4 +1,4 @@
-"""Corrupt disposable copies and inspect them through fresh CLI processes."""
+"""Check CLI diagnostics and recovery for damaged files."""
 import argparse
 import json
 from pathlib import Path
@@ -107,4 +107,4 @@ with tempfile.TemporaryDirectory(prefix="shutter-corruption-") as directory:
     assert valid.read_bytes() == original
 if args.report:
     args.report.write_text(json.dumps(reports, indent=2) + "\n", encoding="utf-8")
-print(f"{len(reports)} destructive corruption cases passed in separate CLI processes")
+print(f"{len(reports)} CLI corruption cases passed")

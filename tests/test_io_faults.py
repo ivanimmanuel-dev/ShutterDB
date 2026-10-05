@@ -1,4 +1,4 @@
-"""Exercise real syscall return paths using a test-only interposer on Linux."""
+"""Check CLI behavior under Linux syscall failures and short I/O."""
 import json
 import os
 from pathlib import Path

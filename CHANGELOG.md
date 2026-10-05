@@ -4,6 +4,7 @@
 
 - Reorganize documentation into installation, API, CLI and storage references.
 - Simplify command-line help and release reporting.
+- Tighten source comments, test descriptions and platform-specific package instructions.
 
 ## 0.1.0 — 2026-10-05
 

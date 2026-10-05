@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <shutter/db.hpp>
 #include <sstream>
 #ifdef _WIN32
@@ -69,7 +68,7 @@ void usage() {
                  "  --json        Print JSON results\n"
                  "  --            Treat remaining arguments as literal keys or values\n\n"
                  "verify scans the file. recover truncates an incomplete final record.\n"
-                 "Exit codes: 0 success, 1 missing key, 2 usage, 3 I/O, 4 corruption, 5 locked.\n";
+                 "Exit codes: 0 success, 1 missing key, 2 usage, 3 runtime, 4 corruption, 5 locked.\n";
 }
 } // namespace
 int main(int argc, char **argv) {
@@ -163,9 +162,7 @@ int main(int argc, char **argv) {
                 std::cout << "}\n";
             } else {
                 stats_text(report.stats);
-                std::cout << '\n'
-                          << (report.ok() ? "Database OK - all checksums valid\n"
-                                          : "Database verification FAILED\n");
+                std::cout << '\n' << (report.ok() ? "Verification passed\n" : "Verification failed\n");
                 if (report.truncated_tail)
                     std::cout << "Incomplete tail at byte " << report.valid_bytes
                               << ". Use shutter recover after making a copy.\n";
@@ -239,7 +236,7 @@ int main(int argc, char **argv) {
         if (as_json)
             std::cout << "{\"ok\":true,\"recovered_tail_bytes\":" << db.stats().recovered_tail_bytes << "}\n";
         else if (command == "recover")
-            std::cout << "Recovered " << db.stats().recovered_tail_bytes << " tail bytes\n";
+            std::cout << "Removed " << db.stats().recovered_tail_bytes << " bytes from incomplete tail\n";
         return 0;
     } catch (const shutter::Error &e) {
         if (as_json)

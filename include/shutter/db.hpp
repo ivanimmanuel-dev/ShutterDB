@@ -31,7 +31,7 @@ class DB {
     void sync();
     void compact();
     VerifyReport verify() const;
-    // Never modifies the database file or performs recovery. Takes a shared lock.
+    // Read-only scan under a shared lock; creates the .lock sidecar if needed.
     static VerifyReport inspect(const std::filesystem::path &path, const Options &options = {});
 
   private:

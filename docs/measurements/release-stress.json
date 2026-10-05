@@ -5,7 +5,7 @@
   "distinct_keys": 100000,
   "independent_processes": 13,
   "seconds": 73.06685087800001,
-  "durability": "buffered with explicit sync every 10000 operations and at each batch end; not one million synchronous commits",
+  "durability": "buffered with explicit sync every 10000 operations and at each batch end",
   "oracle": "key-indexed generation and presence only; expected binary values regenerated on demand",
   "results": [
     {

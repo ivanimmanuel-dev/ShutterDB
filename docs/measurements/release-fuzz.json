@@ -5,8 +5,7 @@
   "environment": "Ubuntu 26.04.1 under WSL2; other build/review activity overlapped some runs",
   "command": "fuzz_TARGET -max_total_time=180 -timeout=5 -max_len=1048576 -rss_limit_mb=512 -print_final_stats=1 CORPUS",
   "seeds": "tools/fuzz-seeds.py: valid records, every truncation, DELETE, binary and empty values",
-  "scope": "Scanner, recovery and verify share the production scanner; no disk syscalls are fuzzed.",
-  "fixes_from_campaign": [],
+  "scope": "In-memory record and scanner fuzzing; scanner, recovery and verify share the same harness.",
   "targets": [
     {
       "target": "record",

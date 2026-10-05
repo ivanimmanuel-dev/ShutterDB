@@ -59,8 +59,7 @@ File::File(const std::filesystem::path &path, Mode mode, bool lock_file) {
     }
 #else
     int flags = mode == Mode::read_only ? O_RDONLY : O_RDWR;
-    // Opening a FIFO for inspection must not block before the regular-file check.
-    // O_NONBLOCK has no effect on the regular files we accept.
+    // O_NONBLOCK lets the regular-file check reject FIFOs without waiting.
     flags |= O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK;
     if (lock_file)
         flags |= O_CREAT;
@@ -237,7 +236,7 @@ void replace(const std::filesystem::path &source, const std::filesystem::path &t
 }
 void sync_directory(const std::filesystem::path &path) {
 #ifdef _WIN32
-    (void)path; // Windows has no equivalent portable directory fsync contract.
+    (void)path; // Windows replacement uses MOVEFILE_WRITE_THROUGH.
 #else
     const int fd = ::open(path.parent_path().c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (fd < 0)

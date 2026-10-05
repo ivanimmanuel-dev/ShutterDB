@@ -1,4 +1,4 @@
-"""Package tracked source at one commit, with deterministic source ZIP metadata."""
+"""Build source and binary release archives with checksums."""
 import argparse
 import datetime
 import hashlib
@@ -70,12 +70,15 @@ if args.install:
                 relative = path.relative_to(args.install).as_posix()
                 mode = 0o755 if relative.startswith("bin/") else 0o644
                 add(archive, f"shutterdb-{version}-{args.platform}/{relative}", path.read_bytes(), mode)
-        notice = (f"ShutterDB {version} experimental, {args.platform}\nCommit: {commit}\n\n"
-                  "bin/shutter is the CLI (shutter.exe on Windows).\n"
+        runtime = {
+            "windows-x64": "x64 MSVC Release; requires the Microsoft Visual C++ runtime.",
+            "linux-x64": "x64 Ubuntu 24.04; requires compatible glibc and libstdc++.",
+        }[args.platform]
+        notice = (f"ShutterDB {version} ({args.platform}, experimental)\nCommit: {commit}\n\n"
+                  f"CLI: bin/{executable.name}\n"
                   "Use this directory as CMAKE_PREFIX_PATH and link ShutterDB::ShutterDB.\n"
-                  "Windows: x64 MSVC Release, requires the Microsoft Visual C++ runtime.\n"
-                  "Linux: x64 Ubuntu 24.04 hosted build, requires compatible glibc/libstdc++.\n"
-                  "The static C++ library requires a compatible compiler, ABI and runtime.\n"
+                  f"Runtime: {runtime}\n"
+                  "Build applications with a compatible C++ compiler, ABI and runtime.\n"
                   "Documentation: https://github.com/ivanimmanuel-dev/ShutterDB#documentation\n")
         add(archive, f"shutterdb-{version}-{args.platform}/README.txt", notice.encode())
     artifacts.append(binary)

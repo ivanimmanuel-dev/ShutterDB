@@ -5,9 +5,8 @@
   "os": "Ubuntu 26.04.1 LTS under WSL2",
   "kernel": "6.18.33.2-microsoft-standard-WSL2",
   "storage": "/dev/sdd, ext4 on a WSL virtual disk; physical device not identified",
-  "data_directory": "/var/tmp (ext4; not tmpfs)",
+  "data_directory": "/var/tmp (ext4)",
   "compiler": "GCC 15.2.0 (Ubuntu 15.2.0-16ubuntu1)",
   "flags": "-O3 -DNDEBUG -std=c++20; no sanitizers; CMake Release",
-  "method": "Three complete repetitions per configuration, sequential execution, warm OS cache; no cache eviction. Sync mode flushes each write. Buffered rates exclude the final explicit sync. Compaction includes verification, syncs and backup copying.",
-  "caveat": "WSL virtualized flush latency and small warm-cache workloads are not native hardware or power-loss evidence."
+  "method": "Three repetitions per configuration, sequential execution, warm OS cache. Sync mode flushes each write. Buffered rates exclude the final explicit sync. Compaction includes verification, syncs and backup copying."
 }

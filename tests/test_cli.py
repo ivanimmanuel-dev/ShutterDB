@@ -1,4 +1,4 @@
-"""Black-box process tests. Every database lives in a temporary directory."""
+"""CLI integration tests using separate processes."""
 import json
 import pathlib
 import subprocess

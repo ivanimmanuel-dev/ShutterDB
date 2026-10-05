@@ -2,7 +2,6 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <shutter/db.hpp>
 #ifndef _WIN32
 #include <sys/resource.h>
@@ -48,7 +47,7 @@ std::uint64_t rss_kib() {
     return static_cast<std::uint64_t>(info.ru_maxrss);
 #endif
 #else
-    return 0; // Optional metric; zero explicitly means unavailable.
+    return 0; // RSS measurement is unavailable on Windows.
 #endif
 }
 void ensure(bool ok, const char *message) {
@@ -125,7 +124,7 @@ int main(int argc, char **argv) {
             db.sync();
             ensure(db.get_string(key(4095)) == bytes, "memory probe value mismatch");
             const auto peak = rss_kib();
-            // The values alone occupy 256 MiB; this release-mode probe should remain far below that.
+            // The values total 256 MiB; cap RSS growth at half that size.
             if (baseline && peak)
                 ensure(peak - baseline < 128 * 1024, "RSS growth suggests resident values");
             std::cout << "{\"phase\":\"memory\",\"logical_value_bytes\":268435456,\"baseline_peak_rss_kib\":"

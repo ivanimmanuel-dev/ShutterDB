@@ -10,8 +10,7 @@ void DB::Impl::recover_compaction() {
         if (detail::exists(path)) {
             File primary(path, File::Mode::read_only);
             auto check = scan(primary, options).report;
-            // A newer format may be valid. Never overwrite it with an older backup.
-            // Resource/IO failures likewise cannot establish that rollback is safe.
+            // Only a corrupt or missing primary permits backup recovery.
             if (check.issue && check.issue->code != ErrorCode::corruption)
                 require_valid(check);
             primary_valid = check.ok();
@@ -61,7 +60,7 @@ void DB::Impl::compact() {
         auto next = scan(*compacted, options);
         require_valid(next.report);
         compacted->sync();
-        // A durable backup makes failures around replacement explicitly recoverable.
+        // Sync both copies before replacing the primary.
         file->sync();
         copy_durable(*file, backup_temp);
         replace(backup_temp, backup);
@@ -79,7 +78,7 @@ void DB::Impl::compact() {
         remove_file(backup);
         sync_directory(path);
     } catch (...) {
-        // Keep all evidence for the next open; never continue on a possibly replaced handle.
+        // Leave sidecars for recovery and require a fresh data handle.
         poisoned = true;
         throw;
     }

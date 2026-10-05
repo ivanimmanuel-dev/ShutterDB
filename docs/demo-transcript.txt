@@ -29,7 +29,7 @@ Reclaimable bytes   162
 Last sequence       4
 Format              v1
 
-Database OK - all checksums valid
+Verification passed
 $ shutter verify --db corrupt-copy.shdb --json
 {"ok":false,"header_valid":true,"truncated_tail":false,"valid_bytes":32,"keys":0,"records":0,"put_records":0,"tombstones":0,"database_bytes":251,"live_bytes":0,"reclaimable_bytes":219,"last_sequence":0,"format_version":1,"error":"CORRUPTION","message":"payload CRC32C mismatch","offset":32,"expected_crc32c":214441476,"actual_crc32c":1489980226}
 $ shutter verify --db app.shdb
@@ -45,7 +45,7 @@ Reclaimable bytes   162
 Last sequence       4
 Format              v1
 
-Database OK - all checksums valid
+Verification passed
 $ shutter compact --db app.shdb
 OK
 $ shutter get username --db app.shdb
@@ -65,7 +65,7 @@ Reclaimable bytes   0
 Last sequence       4
 Format              v1
 
-Database OK - all checksums valid
+Verification passed
 $ shutter verify --db app.shdb
 ShutterDB
 
@@ -79,5 +79,5 @@ Reclaimable bytes   0
 Last sequence       4
 Format              v1
 
-Database OK - all checksums valid
+Verification passed
 Demo passed: persistence, deletion, corruption detection and compaction.

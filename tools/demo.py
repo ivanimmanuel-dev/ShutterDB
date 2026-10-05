@@ -1,4 +1,4 @@
-"""Run the persistence, corruption and compaction tour on disposable files."""
+"""Demonstrate persistence, corruption detection and compaction."""
 from pathlib import Path
 import json
 import shutil

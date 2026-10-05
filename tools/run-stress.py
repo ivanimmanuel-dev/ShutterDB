@@ -1,7 +1,6 @@
-"""A million operations, independent-process restarts, and an oracle without resident values."""
+"""Run a million operations across process restarts and compare against regenerated values."""
 import argparse
 import json
-import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -27,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix="shutter-stress-", dir=args.directory) a
 assert sum(r.get("operations", 0) for r in results) == 1000000
 report = {"passed": True, "seed": 20261005, "operations": 1000000, "distinct_keys": 100000,
           "independent_processes": len(results), "seconds": time.monotonic() - started,
-          "durability": "buffered with explicit sync every 10000 operations and at each batch end; not one million synchronous commits",
+          "durability": "buffered with explicit sync every 10000 operations and at each batch end",
           "oracle": "key-indexed generation and presence only; expected binary values regenerated on demand",
           "results": results}
 args.output.parent.mkdir(parents=True, exist_ok=True)

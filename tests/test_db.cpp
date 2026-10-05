@@ -305,7 +305,7 @@ TEST_CASE("compaction preserves latest values, drops dead records, and preserves
     CHECK(db.stats().last_sequence == sequence + 1);
     CHECK(db.verify().ok());
 }
-TEST_CASE("injected append failures have explicit restart outcomes") {
+TEST_CASE("append failure recovery reflects the last completed write stage") {
     for (const auto point : {Fault::before_append, Fault::during_append, Fault::after_append,
                              Fault::before_flush, Fault::after_flush}) {
         Temp t;
@@ -477,7 +477,7 @@ TEST_CASE("a partial header with an old sequence is corruption and is never trun
     expect_error([&] { DB db(t.path); }, ErrorCode::corruption);
     CHECK(read_all(t.path) == bytes);
 }
-TEST_CASE("compaction torture retains exact binary, large and near-limit values") {
+TEST_CASE("repeated compaction preserves binary and maximum-size keys and values") {
     Temp t;
     const std::string binary_key("binary\0key", 10);
     const std::string binary_value("\0\xff\n\r", 4);
@@ -514,7 +514,7 @@ TEST_CASE("compaction torture retains exact binary, large and near-limit values"
         CHECK(db.verify().ok());
     }
 }
-TEST_CASE("sequence exhaustion and checksummed duplicate sequences fail closed") {
+TEST_CASE("sequence exhaustion rejects writes and duplicate sequences reject opens") {
     Temp t;
     auto bytes = file_header(UINT64_MAX);
     write_all(t.path, bytes);
@@ -553,7 +553,7 @@ TEST_CASE("inspect rejects a FIFO without waiting for a producer") {
     REQUIRE(WIFEXITED(status));
     CHECK(WEXITSTATUS(status) == 0);
 }
-TEST_CASE("process termination at append and compaction boundaries recovers on Linux") {
+TEST_CASE("process termination at append and compaction boundaries recovers on POSIX") {
     for (const auto point :
          {Fault::before_append, Fault::during_append, Fault::after_append, Fault::before_flush,
           Fault::after_flush, Fault::compaction_start, Fault::temporary_write, Fault::temporary_validation,

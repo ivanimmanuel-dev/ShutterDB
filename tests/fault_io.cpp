@@ -1,4 +1,4 @@
-// Linux test-only syscall interposer. Loaded only into disposable CLI subprocesses.
+// Linux syscall fault injection for CLI integration tests.
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>

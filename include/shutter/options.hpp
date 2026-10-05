@@ -10,7 +10,7 @@ struct Options {
     bool create_if_missing = true;
     bool recover_truncated_tail = true;
     std::size_t max_live_keys = 1'000'000;
-    // Budget includes key bytes plus a conservative 128 bytes per index entry.
+    // Index budget charges key length plus 128 bytes per entry.
     std::uint64_t max_index_bytes = 256ULL * 1024 * 1024;
 };
 } // namespace shutter

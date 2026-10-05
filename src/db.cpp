@@ -72,7 +72,7 @@ void DB::Impl::append(Kind kind, std::string_view key, std::span<const std::byte
     const auto old_size = found == state.index.end() ? 0U : found->second.total_size;
     const auto cost = key.size() + 128;
     const bool is_new = kind == Kind::put && found == state.index.end();
-    // Allocate the map node before touching the log. Linking a node of the same allocator is nonallocating.
+    // Allocate before append so publishing the new index entry cannot allocate.
     Index staged;
     if (is_new) {
         if (state.index.size() >= options.max_live_keys || cost > options.max_index_bytes ||
