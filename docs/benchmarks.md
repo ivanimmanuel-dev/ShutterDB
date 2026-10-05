@@ -4,8 +4,7 @@ The [asset-cache comparison](asset-cache-v02-results.md) tests ShutterDB, RocksD
 SQLite on 64 MiB and 1 GiB datasets. It measures grouped writes, reads, repeated updates,
 reopen, compaction, file sizes and process memory. A second run requests filesystem-cache
 eviction before each phase. The report includes build settings, raw data and reproduction
-commands. The [earlier SQLite comparison](asset-cache-results.md) also measures a sync
-on every write.
+commands.
 
 The standalone benchmark below measures nine ShutterDB workloads and writes one JSON
 result per run.
@@ -43,10 +42,5 @@ durations. Compaction includes verification, syncs, backup copying, replacement 
 `--sync` includes a synchronization call in each write. Buffered runs sync once outside
 the write timings, before reopen. Reads and reopen use warm OS caches.
 
-Run at least three repetitions without concurrent builds or tests. Retain the raw JSON
-and report medians and ranges. Record CPU, RAM, OS, filesystem, storage, compiler, flags,
-dataset size, key/value sizes and write mode.
-
-The [v0.1.0 results](benchmark-results.md) contain nine runs across three configurations.
-For cross-engine comparisons, match durability, checksumming, cache state, dataset,
-thread count and compaction accounting.
+Compare runs with the same write mode, dataset and cache state. Report the CPU, RAM,
+filesystem, compiler and build flags alongside timings.

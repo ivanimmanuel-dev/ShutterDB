@@ -52,17 +52,12 @@ The key is `preview-v2:128:<sha256>`. A content change produces a new key even i
 file size and timestamp remain unchanged. Changing the renderer should change the
 version prefix. Writes synchronize every 128 generated previews and at the end.
 
-## Test and inspect
+## Inspect the cache
 
 ```sh
-ctest --test-dir build-assets -R asset_cache --output-on-failure
 shutter stats --db previews.shdb
 shutter verify --db previews.shdb
 ```
-
-The integration test checks exact PNG pixels, JPEG decoding, transparency, small images,
-duplicate content, same-size/timestamp changes, restart reuse, batching, bounded growth,
-eviction and malformed inputs.
 
 The [storage comparison](asset-cache-v02-results.md) measures ShutterDB, SQLite and
 RocksDB without image decoding or hashing in the storage timings.

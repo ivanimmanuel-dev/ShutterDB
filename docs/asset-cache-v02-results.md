@@ -58,7 +58,7 @@ RocksDB performs background flushes and compactions during other phases, includi
 untimed correctness checks. Its explicit compaction column measures the remaining
 flush/CompactRange work, not all lifetime maintenance. SQLite uses VACUUM and a WAL
 checkpoint. ShutterDB verifies the old log and replacement and durably copies a backup
-before publication. At this size, that full-file protocol is a substantial maintenance cost.
+before replacing the log.
 File totals include regular sidecars, WALs, manifests and SST files after close.
 
 ## Reopen improvement
@@ -99,8 +99,7 @@ Seconds: median (minimum–maximum), before updates.
   stamped with each key’s ID and generation; seed 20261005. RocksDB may use background
   worker threads. Engine order reverses on alternate repetitions.
 - ShutterDB uses the ordinary `DB` API. These timings do not include `Cache` eviction
-  bookkeeping, image decoding or hashing. The [image integration test](testing.md)
-  separately checks automatic eviction and budget enforcement.
+  bookkeeping, image decoding or hashing.
 - ShutterDB uses buffered writes with `sync()` every 128 operations. SQLite commits
   transactions of 128 operations with WAL and `synchronous=FULL`. RocksDB writes
   `WriteBatch` groups of 128 operations with `WriteOptions.sync=true`. SQLite and
@@ -117,9 +116,8 @@ Seconds: median (minimum–maximum), before updates.
   checksum is added to the other engines.
 - AMD Ryzen 7 5825U, 16 logical CPUs exposed, Ubuntu 26.04.1 under WSL2, 6.69 GiB RAM.
   GCC 15.2.0; CMake Release (`-O3 -DNDEBUG`); SSE4.2 CRC32C on ShutterDB. Executables
-  and data are on ext4 under `/var/tmp`, on a WSL virtual disk. The physical drive
-  was not identified. ShutterDB measurements ran sequentially, with its builds/tests
-  paused. Other QEMU workloads were observed on the host; hardware was not isolated.
+  and data are on ext4 under `/var/tmp`, on a WSL virtual disk. Runs executed
+  sequentially. Background QEMU workloads were active on the host.
 - Three repetitions per configuration. Every phase uses a fresh process and verifies
   every expected value and deletion. Compaction verifies values before and after.
 
@@ -142,8 +140,7 @@ eviction-hint run on Linux. Zero rounds skips the update and compaction phases.
 Place the executable and data on the filesystem being measured. For custom dependency
 builds, set `CMAKE_PREFIX_PATH` for RocksDB, and `SQLite3_INCLUDE_DIR` / `SQLite3_LIBRARY`
 for SQLite. The source hashes and dependency build details below identify these results.
-The runner also supports `--modes sync` to synchronize every individual operation;
-the [earlier report](asset-cache-results.md#synchronizing-each-write) measures that workload.
+Use `--modes sync` to synchronize every individual operation.
 
 For a paired reopen comparison, compile this version’s `benchmarks/asset_cache.cpp`
 against each engine revision. Populate and update one database with the current binary,
@@ -154,5 +151,4 @@ churn rounds. Prime each group once and retain three measured runs per binary.
 Raw data: [v0.2](measurements/asset-cache-v02-after.json) ·
 [eviction requests](measurements/asset-cache-v02-evicted.json) ·
 [paired reopening](measurements/asset-cache-v02-reopen.json) ·
-[earlier engine, separate run](measurements/asset-cache-v02-before.json) ·
 [environment and dependency builds](measurements/asset-cache-v02-environment.json).

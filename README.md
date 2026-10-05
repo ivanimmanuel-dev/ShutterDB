@@ -1,7 +1,7 @@
 # ShutterDB
 
 [![CI](https://github.com/ivanimmanuel-dev/ShutterDB/actions/workflows/ci.yml/badge.svg)](https://github.com/ivanimmanuel-dev/ShutterDB/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ivanimmanuel-dev/ShutterDB?include_prereleases)](https://github.com/ivanimmanuel-dev/ShutterDB/releases)
+[![Release](https://img.shields.io/github/v/release/ivanimmanuel-dev/ShutterDB)](https://github.com/ivanimmanuel-dev/ShutterDB/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Persistent binary caches for C++20.
@@ -52,7 +52,7 @@ ctest --test-dir build -C Release --output-on-failure
 ```
 
 The CLI is `build/shutter`, or `build/Release/shutter.exe` with Visual Studio.
-The [v0.2.0 release](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.2.0)
+The [v0.2.1 release](https://github.com/ivanimmanuel-dev/ShutterDB/releases/tag/v0.2.1)
 includes a source archive and Linux/Windows packages with the CLI, library, headers
 and CMake configuration.
 

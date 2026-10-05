@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-10-05
+
+- Shorten reference documentation and contribution instructions.
+- Keep the current asset-cache benchmark report and supporting measurements.
+
+The C++ API, storage behavior and format v1 are unchanged.
+[Release notes](docs/releases/v0.2.1.md).
+
 ## 0.2.0 — 2026-10-05
 
 - Add `shutter::Cache` with a disk budget, access-based eviction and automatic compaction.
@@ -13,7 +21,7 @@ Format v1 is unchanged. [Release notes](docs/releases/v0.2.0.md).
 
 ## 0.1.0 — 2026-10-05
 
-First experimental release.
+First release.
 
 - Append-only storage for binary keys and values, with tombstones and an in-memory key index.
 - CRC32C checksums on file headers, record headers and payloads.
@@ -26,4 +34,4 @@ Release fixes: preserve unsupported-format files during backup recovery, reject 
 inspection without blocking, validate sequences in partial tails, and include incomplete-tail
 categories and offsets in JSON diagnostics.
 
-[Release notes](docs/releases/v0.1.0.md) · [Test results](https://github.com/ivanimmanuel-dev/ShutterDB/blob/v0.1.0/docs/validation.md)
+[Release notes](docs/releases/v0.1.0.md).

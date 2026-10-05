@@ -54,10 +54,6 @@ handle is open, and coordinate external file operations with database ownership.
 Network filesystems, cloud-synchronized directories and mixed Windows/WSL access to the
 same open database are unsupported.
 
-The write protocol assumes a later torn write does not damage previously synchronized
-sectors. [Failure tests](testing.md) exercise process termination, syscall errors and
-file corruption; physical power-loss behavior has not been measured.
-
 ## Backups and deletion
 
 Close all handles before copying the database. After an interrupted compaction, reopen

@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace shutter {
-inline constexpr std::string_view version = "0.2.0";
+inline constexpr std::string_view version = "0.2.1";
 class DB {
   public:
     explicit DB(const std::filesystem::path &path, const Options &options = {});

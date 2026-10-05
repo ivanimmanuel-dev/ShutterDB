@@ -19,14 +19,11 @@ All suites use temporary databases; set `TMPDIR` on POSIX to select the filesyst
 | `syscall_faults` | 24 Linux scenarios for short I/O, EINTR, ENOSPC, sync, truncate and rename failures |
 | `asset_cache` (optional) | PNG/JPEG pixels, alpha, restart reuse, content changes, batching, eviction and malformed inputs |
 
-The engine tests inject failures at eleven append, sync and compaction boundaries.
-POSIX tests also terminate child processes at those boundaries. The Linux syscall suite
-uses a test-only interposer, excluded from installed builds and ASan configurations.
+The engine tests inject failures and terminate POSIX child processes at eleven append,
+sync and compaction boundaries. The Linux syscall suite uses a test-only interposer.
 
 Enable `SHUTTER_BUILD_ASSET_CACHE` with OpenSSL, PNG and JPEG development libraries,
 and Python Pillow installed to include the preview test.
-CI also runs the [SQLite/RocksDB comparison](asset-cache-v02-results.md) on a small dataset and
-checks every value after insertion, overwrites, deletion, compaction and reopening.
 
 ## Sanitizers
 
@@ -71,24 +68,9 @@ Targets use libFuzzer with ASan/UBSan. `record` exercises decoding and payload c
 report invariants. The scanner harness limits inputs to 1 MiB and the index to 128 keys
 and 1 MiB. Fuzz callbacks use in-memory input; syscall failures have a separate suite.
 
-Increase `-max_total_time` for longer runs. Retain the corpus and minimized crash inputs,
-and add a regression test for each fix. CI runs 30 seconds per target.
+Set `-max_total_time` to the desired run length. CI runs 30 seconds per target.
 
 ## Formatting and analysis
 
 Format project-owned C and C++ with clang-format 21. Enable the configured clang-tidy checks
 with `-DSHUTTER_CLANG_TIDY=ON -DSHUTTER_BUILD_TESTS=OFF`.
-
-CI covers GCC/Clang Debug and Release, Windows MSVC, macOS, sanitizers, fuzzing, stress,
-formatting, static analysis and installed/FetchContent consumers.
-
-## Package checks
-
-```sh
-python3 tools/check-project.py
-python3 tests/test_release.py
-```
-
-These check version consistency, release notes, local documentation links, reproducible
-source archives and package checksums. Version checks also run under optimized Python.
-The release workflow requires successful hosted CI on the tagged commit.

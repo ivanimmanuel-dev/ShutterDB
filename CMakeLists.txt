@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(ShutterDB VERSION 0.2.0 LANGUAGES CXX)
+project(ShutterDB VERSION 0.2.1 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 find_package(Threads REQUIRED)
