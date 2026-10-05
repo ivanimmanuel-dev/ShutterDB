@@ -59,7 +59,9 @@ File::File(const std::filesystem::path &path, Mode mode, bool lock_file) {
     }
 #else
     int flags = mode == Mode::read_only ? O_RDONLY : O_RDWR;
-    flags |= O_CLOEXEC | O_NOFOLLOW;
+    // Opening a FIFO for inspection must not block before the regular-file check.
+    // O_NONBLOCK has no effect on the regular files we accept.
+    flags |= O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK;
     if (lock_file)
         flags |= O_CREAT;
     else if (mode == Mode::create_exclusive)

@@ -26,6 +26,12 @@ inline void exercise(std::span<const std::byte> bytes) {
         std::abort();
     if (state.report.ok() && state.report.valid_bytes != bytes.size())
         std::abort();
+    if (state.report.truncated_tail && !state.report.issue) {
+        MemoryReader prefix(bytes.first(static_cast<std::size_t>(state.report.valid_bytes)));
+        const auto recovered = detail::scan(prefix, options);
+        if (!recovered.report.ok() || recovered.index.size() != state.index.size())
+            std::abort();
+    }
     try {
         detail::require_valid(state.report, true);
     } catch (const Error &) {

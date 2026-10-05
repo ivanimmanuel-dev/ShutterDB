@@ -36,6 +36,8 @@ Scan scan(const Reader &reader, const Options &options) {
             if (remaining < record_header_size) {
                 if (!plausible_partial_header(bytes))
                     throw Error(ErrorCode::corruption, "unexpected bytes after final record", offset);
+                if (bytes.size() >= 16 && read_le(bytes, 8, 8) <= previous_sequence)
+                    throw Error(ErrorCode::corruption, "non-increasing sequence in partial header", offset);
                 report.truncated_tail = true;
                 break;
             }

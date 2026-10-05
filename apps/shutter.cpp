@@ -143,6 +143,10 @@ int main(int argc, char **argv) {
                     if (issue.expected_crc)
                         std::cout << ",\"expected_crc32c\":" << *issue.expected_crc
                                   << ",\"actual_crc32c\":" << *issue.actual_crc;
+                } else if (report.truncated_tail) {
+                    std::cout
+                        << ",\"error\":\"CORRUPTION\",\"message\":\"incomplete final record\",\"offset\":"
+                        << report.valid_bytes;
                 }
                 std::cout << "}\n";
             } else {

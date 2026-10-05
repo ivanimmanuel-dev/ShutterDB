@@ -10,9 +10,9 @@ void DB::Impl::recover_compaction() {
         if (detail::exists(path)) {
             File primary(path, File::Mode::read_only);
             auto check = scan(primary, options).report;
-            // Resource/IO failures must not trigger rollback of a possibly valid primary.
-            if (check.issue && check.issue->code != ErrorCode::corruption &&
-                check.issue->code != ErrorCode::unsupported_format)
+            // A newer format may be valid. Never overwrite it with an older backup.
+            // Resource/IO failures likewise cannot establish that rollback is safe.
+            if (check.issue && check.issue->code != ErrorCode::corruption)
                 require_valid(check);
             primary_valid = check.ok();
         }

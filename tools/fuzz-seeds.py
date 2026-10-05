@@ -31,3 +31,13 @@ for target in ["record", "scanner", "recovery", "verify"]:
     (directory / "valid").write_bytes(seed)
     (directory / "tail").write_bytes(seed[:-3])
     (directory / "empty").write_bytes(header)
+    # Include every truncation boundary and structurally valid DELETE/binary records.
+    for size in range(len(seed)):
+        (directory / f"cut-{size}").write_bytes(seed[:size])
+    for kind, key, value in [(1, b"binary\0key", b"\0\xff"), (1, b"empty", b""), (2, b"key1", b"")]:
+        payload = key + value
+        record = b"SHDR" + struct.pack("<HBBQIIIII", 1, kind, 0, 5, len(key), len(value),
+                                       crc(payload), 40 + len(payload), 0)
+        record += struct.pack("<I", crc(record)) + payload
+        (directory / f"kind-{kind}-{len(value)}").write_bytes(
+            record if target == "record" else header + b"".join(records) + record)

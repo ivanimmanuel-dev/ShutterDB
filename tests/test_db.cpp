@@ -6,6 +6,8 @@
 #include <random>
 #include <thread>
 #ifndef _WIN32
+#include <signal.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -449,7 +451,108 @@ TEST_CASE("one DB serializes operations from multiple threads") {
     CHECK(db.stats().keys == 400);
     CHECK(db.verify().ok());
 }
+TEST_CASE("an unsupported primary is never overwritten by a compaction backup") {
+    Temp t;
+    seed(t.path);
+    const auto backup = read_all(t.path);
+    write_all(sibling(t.path, ".backup"), backup);
+    auto future = backup;
+    write_le(future, 8, 2, 2);
+    write_le(future, 28, crc32c(std::span(future).first(28)), 4);
+    write_all(t.path, future);
+    expect_error([&] { DB db(t.path); }, ErrorCode::unsupported_format);
+    CHECK(read_all(t.path) == future);
+    CHECK(read_all(sibling(t.path, ".backup")) == backup);
+}
+TEST_CASE("a partial header with an old sequence is corruption and is never truncated") {
+    Temp t;
+    seed(t.path);
+    auto bytes = read_all(t.path);
+    auto old = encode(Kind::put, 2, "bad", {});
+    bytes.insert(bytes.end(), old.begin(), old.begin() + 20);
+    write_all(t.path, bytes);
+    auto report = DB::inspect(t.path);
+    REQUIRE(report.issue);
+    CHECK_FALSE(report.truncated_tail);
+    expect_error([&] { DB db(t.path); }, ErrorCode::corruption);
+    CHECK(read_all(t.path) == bytes);
+}
+TEST_CASE("compaction torture retains exact binary, large and near-limit values") {
+    Temp t;
+    const std::string binary_key("binary\0key", 10);
+    const std::string binary_value("\0\xff\n\r", 4);
+    const std::string large_key(max_key_size, 'k');
+    const std::string large_value(max_value_size, 'v');
+    std::uint64_t before = 0;
+    {
+        DB db(t.path, buffered());
+        for (int i = 0; i < 5000; ++i)
+            db.put("hot", std::to_string(i));
+        for (int i = 0; i < 2000; ++i) {
+            const auto key = "dead" + std::to_string(i);
+            db.put(key, "discard");
+            CHECK(db.remove(key));
+        }
+        db.put(binary_key, binary_value);
+        db.put(large_key, large_value);
+        db.put("empty", "");
+        before = db.stats().database_bytes;
+        db.sync();
+    }
+    for (int iteration = 0; iteration < 3; ++iteration) {
+        DB db(t.path);
+        db.compact();
+        CHECK(db.get_string("hot") == "4999");
+        CHECK(db.get_string(binary_key) == binary_value);
+        CHECK(db.get_string(large_key) == large_value);
+        CHECK(db.get_string("empty") == "");
+        CHECK_FALSE(db.contains("dead1999"));
+        CHECK(db.stats().keys == 4);
+        CHECK(db.stats().records == 4);
+        CHECK(db.stats().tombstones == 0);
+        CHECK(db.stats().database_bytes < before);
+        CHECK(db.verify().ok());
+    }
+}
+TEST_CASE("sequence exhaustion and checksummed duplicate sequences fail closed") {
+    Temp t;
+    auto bytes = file_header(UINT64_MAX);
+    write_all(t.path, bytes);
+    {
+        DB db(t.path);
+        expect_error([&] { db.put("k", "v"); }, ErrorCode::resource_limit);
+    }
+    CHECK(read_all(t.path) == bytes);
+    bytes = file_header();
+    const auto record = encode(Kind::put, 1, "key", {});
+    bytes.insert(bytes.end(), record.begin(), record.end());
+    bytes.insert(bytes.end(), record.begin(), record.end());
+    write_all(t.path, bytes);
+    const auto report = DB::inspect(t.path);
+    REQUIRE(report.issue);
+    CHECK(report.issue->offset == file_header_size + record.size());
+    CHECK_THROWS_AS(DB(t.path), Error);
+}
 #ifndef _WIN32
+TEST_CASE("inspect rejects a FIFO without waiting for a producer") {
+    Temp t;
+    REQUIRE(::mkfifo(t.path.c_str(), 0600) == 0);
+    const auto pid = ::fork();
+    REQUIRE(pid >= 0);
+    if (pid == 0) {
+        ::alarm(2);
+        try {
+            (void)DB::inspect(t.path);
+        } catch (const Error &e) {
+            std::_Exit(e.code() == ErrorCode::invalid_argument ? 0 : 2);
+        }
+        std::_Exit(1);
+    }
+    int status = 0;
+    REQUIRE(::waitpid(pid, &status, 0) == pid);
+    REQUIRE(WIFEXITED(status));
+    CHECK(WEXITSTATUS(status) == 0);
+}
 TEST_CASE("process termination at append and compaction boundaries recovers on Linux") {
     for (const auto point :
          {Fault::before_append, Fault::during_append, Fault::after_append, Fault::before_flush,

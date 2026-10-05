@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
         shutter::Options options;
         options.sync_writes = sync;
         options.max_live_keys = 2 * count;
+        options.max_index_bytes = static_cast<std::uint64_t>(2 * count) * (key_size + 128);
         std::vector<Result> results;
         auto db = std::make_unique<shutter::DB>(path, options);
         results.push_back(measure("sequential_put", count, [&] {
@@ -125,6 +126,10 @@ int main(int argc, char **argv) {
         results.push_back(
             measure("startup_recovery", 1, [&] { db = std::make_unique<shutter::DB>(path, options); }));
         const auto before = db->stats().database_bytes;
+        results.push_back(measure("verification", 1, [&] {
+            if (!db->verify().ok())
+                throw std::runtime_error("benchmark verification failed");
+        }));
         results.push_back(measure("compaction", 1, [&] { db->compact(); }));
         const auto after = db->stats().database_bytes;
         if (!db->verify().ok())
