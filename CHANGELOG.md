@@ -3,8 +3,7 @@
 ## 0.2.1 — 2026-10-05
 
 - Retain the original log through a hard link during compaction, avoiding a full backup copy on supported filesystems.
-- Add a bounded-cache benchmark for automatic eviction, write pauses, reads and reopening.
-- Publish cache-latency measurements and updated SQLite/RocksDB comparisons with raw results.
+- Add bounded-cache latency benchmarks and update the SQLite/RocksDB comparison, including raw results.
 
 The C++ API and format v1 are unchanged.
 [Release notes](docs/releases/v0.2.1.md).

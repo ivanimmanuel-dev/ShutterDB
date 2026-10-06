@@ -1,8 +1,7 @@
 # Performance
 
-ShutterDB v0.2.1 measured as a bounded cache and compared with SQLite and RocksDB
-for binary storage. Results use one Ryzen 7 / WSL2 system, three repetitions and
-synchronization every 128 writes.
+ShutterDB v0.2.1 cache and storage measurements, with SQLite and RocksDB comparisons.
+Results use a Ryzen 7 / WSL2 system, three repetitions and synchronization every 128 writes.
 
 ## Bounded cache
 
@@ -10,7 +9,7 @@ Each run inserts 4,096 unique assets into a 64 MiB `Cache`. The 4 KiB values fit
 64 KiB values force eviction and automatic compaction. Write timings include both.
 Seconds and worst-call milliseconds: median (minimum–maximum) across three runs.
 
-| Values | Retained keys | Evicted keys | All writes, s | Maintenance writes, s | Worst write, ms |
+| Values | Retained keys | Evicted keys | All writes, s | Writes with compaction, s | Worst write, ms |
 |---|---:|---:|---:|---:|---:|
 | 4 KiB | 4,096 | 0 | 0.178 (0.167–0.184) | 0.000 (0.000–0.000) | 8.4 (4.9–9.1) |
 | 64 KiB | 1,000 | 3,096 | 3.845 (3.352–4.564) | 3.331 (2.887–3.987) | 220.4 (145.1–256.1) |
@@ -19,19 +18,17 @@ The 64 KiB workload triggers compaction on 24 of 4,096 writes. Those calls accou
 for 87% of write time. Compaction verifies the old and new logs and writes every
 live value into the replacement; it pauses the owning handle while it runs.
 
-Reads follow a complete verification pass and return owned value buffers. Each run
-measures three shuffled hit passes and one pass over evicted keys. The table reports
-medians of each run's latency percentiles. Reopening recreates the cache handle in
-the same process with a warm filesystem cache; its time covers handle construction.
+Reads return owned buffers after a verification pass. Each run measures three shuffled
+hit passes and one evicted-key pass. The table shows medians of the per-run latency
+percentiles. Reopening times handle construction in the same process with a warm filesystem cache.
 
 | Values | Hit p50, µs | Hit p99, µs | Evicted-key miss p50, µs | Reopen, ms |
 |---|---:|---:|---:|---:|
 | 4 KiB | 3.70 | 13.48 | — | 8.98 |
 | 64 KiB | 17.91 | 42.75 | 0.26 | 15.62 |
 
-Input generation, statistics queries and full byte comparisons are outside the timers.
-Every write checks the main-file budget; retained and evicted keys are checked again
-after reopening. Each run finishes with full file verification.
+Input generation, statistics and byte comparisons are outside the timers.
+The [benchmark guide](benchmarks.md#bounded-cache) describes verification and JSON fields.
 
 ## Storage comparison
 
@@ -89,12 +86,12 @@ There are 3,072 live values after both rounds. Durations are median seconds.
 | 64 KiB | SQLite tuned | 0.578 | 0.017 | 2.211 | 193.72 |
 | 64 KiB | RocksDB | 1.674 | 0.144 | 0.723 | 192.63 |
 
-RocksDB performs background flushes and compactions during other phases, including
-untimed correctness checks. Its explicit compaction column measures the remaining
-flush/CompactRange work. SQLite uses VACUUM and a WAL checkpoint. ShutterDB verifies
-the old log and replacement, retains a synchronized rollback backup through a hard
-link on this filesystem, then replaces the log. Unsupported filesystems use a full
-backup copy. File totals include regular sidecars, WALs, manifests and SST files after close.
+RocksDB's explicit compaction time covers the remaining flush/CompactRange work after
+background maintenance in earlier phases, including untimed verification. SQLite runs
+VACUUM and a WAL checkpoint. ShutterDB verifies both logs, creates a synchronized
+rollback backup and replaces the file. The backup uses a hard link on this filesystem;
+filesystems without link support use a full copy. File totals include sidecars, WALs,
+manifests and SST files after close.
 
 ### Filesystem-cache eviction requests
 

@@ -16,11 +16,13 @@ All suites use temporary databases; set `TMPDIR` on POSIX to select the filesyst
 | `public_api_example` | Public headers and basic operations |
 | `cli` | Separate-process persistence, binary I/O, JSON and exit codes |
 | `corruption` | Damaged-file diagnostics and recovery behavior |
-| `syscall_faults` | Linux short I/O, EINTR, ENOSPC, sync, truncate and rename failures |
+| `syscall_faults` | Linux short I/O, EINTR, ENOSPC, sync, truncate, link and rename failures |
 | `asset_cache` (optional) | PNG/JPEG pixels, alpha, restart reuse, content changes, batching, eviction and malformed inputs |
+| `bounded_cache_benchmark` (optional) | Budget enforcement, eviction, compaction and retained values after reopening |
 
 The engine suite tests recovery after interrupted writes and compaction. The Linux
-syscall suite uses a test-only interposer.
+syscall suite uses a test-only interposer. `SHUTTER_BUILD_BENCHMARKS=ON` includes the
+bounded-cache benchmark test.
 
 Enable `SHUTTER_BUILD_ASSET_CACHE` with OpenSSL, PNG and JPEG development libraries,
 and Python Pillow installed to include the preview test.

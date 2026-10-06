@@ -23,10 +23,10 @@ implementation for other CPUs. Both produce the same format-v1 checksum.
 Opening and verification read the log through a reusable 1 MiB window, growing it
 for an individual record when necessary. Records in the window are checksummed
 without allocating a separate payload buffer. Replay updates existing index entries
-in place when a key is overwritten. Every header and payload is validated.
+in place when a key is overwritten.
 
 `Cache` wraps the database with an access-order list and a key-to-list lookup. It
-evicts entries under capacity pressure and invokes ordinary verified compaction.
+evicts entries under capacity pressure and invokes verified compaction.
 Read recency is kept in memory; restart order comes from record sequence numbers.
 
 ## Writing and failure
